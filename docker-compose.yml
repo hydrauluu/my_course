@@ -1,0 +1,91 @@
+name: python-course
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: python_course
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://postgres:postgres@db:5432/python_course"
+      DATABASE_URL_SYNC: "postgresql+psycopg2://postgres:postgres@db:5432/python_course"
+      REDIS_URL: "redis://redis:6379/0"
+      FRONTEND_URL: "http://localhost:5173"
+      GITHUB_CLIENT_ID: "${GITHUB_CLIENT_ID:-}"
+      GITHUB_CLIENT_SECRET: "${GITHUB_CLIENT_SECRET:-}"
+      GITHUB_WEBHOOK_SECRET: "${GITHUB_WEBHOOK_SECRET:-}"
+      CLAUDE_API_KEY: "${CLAUDE_API_KEY:-}"
+      SCR_DIR: "/scr"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./scr:/scr
+    command: >
+      sh -c "python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  celery_worker:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://postgres:postgres@db:5432/python_course"
+      DATABASE_URL_SYNC: "postgresql+psycopg2://postgres:postgres@db:5432/python_course"
+      REDIS_URL: "redis://redis:6379/0"
+      CLAUDE_API_KEY: "${CLAUDE_API_KEY:-}"
+      SCR_DIR: "/scr"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./scr:/scr
+    command: celery -A app.celery_worker.celery_app worker --loglevel=info --pool=solo
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_PROXY: "http://backend:8000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:

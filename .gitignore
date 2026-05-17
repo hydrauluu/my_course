@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+*.egg
+.venv/
+venv/
+env/
+*.env
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.pyc
+
+# Node
+node_modules/
+frontend/dist/
+frontend/build/
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Docker
+.docker/
+
+# Environment
+!.env.example
