@@ -46,7 +46,7 @@ function preprocessAdmonitions(md: string): string {
       .map((l: string) => l.slice(minIndent))
       .join('\n')
       .trim()
-    return `> **${label}**\n>\n${dedented.split('\n').map((line: string) => `> ${line}`).join('\n')}\n`
+    return `\n\n> **${label}**\n>\n${dedented.split('\n').map((line: string) => `> ${line}`).join('\n')}\n\n`
   })
 }
 

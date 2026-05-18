@@ -7,10 +7,10 @@ import { Badge } from '@/components/ui/badge'
 import { BookOpen, Code, FileText } from 'lucide-react'
 
 const blockColors = [
-  { border: 'border-l-amber-600', bg: 'bg-amber-50', badge: 'bg-amber-100 text-amber-800' },
-  { border: 'border-l-sky-600', bg: 'bg-sky-50', badge: 'bg-sky-100 text-sky-800' },
-  { border: 'border-l-violet-600', bg: 'bg-violet-50', badge: 'bg-violet-100 text-violet-800' },
-  { border: 'border-l-emerald-600', bg: 'bg-emerald-50', badge: 'bg-emerald-100 text-emerald-800' },
+  { border: 'border-l-[#C4A882] dark:border-l-[#8B7355]', bg: 'bg-[#F5EDE4] dark:bg-[#2A2218]', badge: 'bg-[#E8D9C8] dark:bg-[#3D3225] text-[#6B5240] dark:text-[#C4A882]' },
+  { border: 'border-l-[#A68B6B] dark:border-l-[#7A5F45]', bg: 'bg-[#EDE3D7] dark:bg-[#251E15]', badge: 'bg-[#D9C8B2] dark:bg-[#362B1E] text-[#5C4433] dark:text-[#A68B6B]' },
+  { border: 'border-l-[#8B6F55] dark:border-l-[#6B4F35]', bg: 'bg-[#E5D8CB] dark:bg-[#201A12]', badge: 'bg-[#C9B49C] dark:bg-[#2F2418] text-[#4D3627] dark:text-[#8B6F55]' },
+  { border: 'border-l-[#6B5240] dark:border-l-[#5C4433]', bg: 'bg-[#DDD0C2] dark:bg-[#1B1510]', badge: 'bg-[#B89F86] dark:bg-[#281E14] text-[#3E2B1E] dark:text-[#6B5240]' },
 ]
 
 const blockIcons = [BookOpen, BookOpen, Code, FileText]
