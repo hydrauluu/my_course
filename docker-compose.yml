@@ -45,6 +45,9 @@ services:
       CLAUDE_API_KEY: "${CLAUDE_API_KEY:-}"
       SCR_DIR: "/scr"
       TEACHER_GITHUB_USERNAME: "${TEACHER_GITHUB_USERNAME:-}"
+      SEED_UPDATE_CONTENT: "${SEED_UPDATE_CONTENT:-0}"
+      RATE_LIMIT_ENABLED: "${RATE_LIMIT_ENABLED:-true}"
+      RATE_LIMIT_DEFAULT: "${RATE_LIMIT_DEFAULT:-60/minute}"
     depends_on:
       db:
         condition: service_healthy

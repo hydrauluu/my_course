@@ -22,16 +22,3 @@ async def get_db() -> AsyncSession:
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        from sqlalchemy import inspect, text
-        def _migrate(sync_conn):
-            inspector = inspect(sync_conn)
-            columns = [c["name"] for c in inspector.get_columns("lectures")]
-            if "content" not in columns:
-                sync_conn.execute(text("ALTER TABLE lectures ADD COLUMN content TEXT"))
-            student_columns = [c["name"] for c in inspector.get_columns("students")]
-            if "role" not in student_columns:
-                sync_conn.execute(text("ALTER TABLE students ADD COLUMN role VARCHAR(20) DEFAULT 'student'"))
-            assignment_columns = [c["name"] for c in inspector.get_columns("assignments")]
-            if "code_diff" not in assignment_columns:
-                sync_conn.execute(text("ALTER TABLE assignments ADD COLUMN code_diff TEXT"))
-        await conn.run_sync(_migrate)

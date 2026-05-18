@@ -11,6 +11,7 @@ from app.models.student import Student
 
 SCR_DIR = os.environ.get("SCR_DIR", "/scr")
 TEACHER_GITHUB_USERNAME = os.environ.get("TEACHER_GITHUB_USERNAME", "")
+SEED_UPDATE_CONTENT = os.environ.get("SEED_UPDATE_CONTENT", "0").lower() in ("1", "true", "yes")
 
 LECTURES = [
     {
@@ -205,10 +206,11 @@ async def seed_lectures():
                 db.add(Lecture(**lecture_data))
                 print(f"  Added lecture {lecture_data['number']}: {lecture_data['title']}")
             else:
-                content = read_lecture_content(lecture_data["number"])
-                if content and content != existing.content:
-                    existing.content = content
-                    print(f"  Updated content for lecture {lecture_data['number']}")
+                if SEED_UPDATE_CONTENT:
+                    content = read_lecture_content(lecture_data["number"])
+                    if content and content != existing.content:
+                        existing.content = content
+                        print(f"  Updated content for lecture {lecture_data['number']}")
                 print(f"  Lecture {lecture_data['number']} already exists")
 
         await db.commit()
