@@ -368,13 +368,26 @@ print([f() for f in functions])   # [0, 1, 2]
 
 Пример из документации:
 
-!!! quote "docs.python.org / compound statements — funcdef"
-    ```
-funcdef        ::= [decorators] "def" funcname [type_params]
-                       "(" [parameter_list] ")" ["->" expression] ":" suite
-    parameter_list ::= defparameter ("," defparameter)* ["," [parameter_list_starargs]]
-                     | parameter_list_starargs
-    ```
+!!! quote "docs.python.org / compound statements — function definitions
+
+  ``` python
+  funcdef:                   [decorators] "def" funcname [type_params] "(" [parameter_list] ")"
+                            ["->" expression] ":" suite
+  decorators:                decorator+
+  decorator:                 "@" assignment_expression NEWLINE
+  parameter_list:            defparameter ("," defparameter)* "," "/" ["," [parameter_list_no_posonly]]
+                              | parameter_list_no_posonly
+  parameter_list_no_posonly: defparameter ("," defparameter)* ["," [parameter_list_starargs]]
+                            | parameter_list_starargs
+  parameter_list_starargs:   "*" [star_parameter] ("," defparameter)* ["," [parameter_star_kwargs]]
+                            | "*" ("," defparameter)+ ["," [parameter_star_kwargs]]
+                            | parameter_star_kwargs
+  parameter_star_kwargs:     "**" parameter [","]
+  parameter:                 identifier [":" expression]
+  star_parameter:            identifier [":" ["*"] expression]
+  defparameter:              parameter ["=" expression]
+  funcname:                  identifier
+  ```
 
 Как читать:
 
