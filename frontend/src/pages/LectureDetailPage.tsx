@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo, useRef, isValidElement, type ReactNode } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -13,11 +13,41 @@ import { Separator } from '@/components/ui/separator'
 import { ArrowLeft, BookOpen, Github, Code, FileText, ChevronLeft, ChevronRight, List } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+function getTextFromChildren(children: ReactNode): string {
+  if (typeof children === 'string' || typeof children === 'number') return String(children)
+  if (Array.isArray(children)) return children.map(getTextFromChildren).join('')
+  if (isValidElement(children)) return getTextFromChildren(children.props.children)
+  return ''
+}
+
 function slugify(text: string): string {
   return text
     .toLowerCase()
     .replace(/[^a-zа-яё0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
+}
+
+function preprocessAdmonitions(md: string): string {
+  const labelMap: Record<string, string> = {
+    quote: 'Цитата',
+    note: 'Примечание',
+    warning: 'Внимание',
+    danger: 'Важно',
+  }
+
+  return md.replace(/^!!!\s+(\w+)\s+"([^"]*)"\s*\n((?:[ \t]+.*\n*|\n)+)/gm, (_match, type, title, content) => {
+    const label = title || labelMap[type.toLowerCase()] || type
+    const lines = content.split('\n')
+    const nonEmptyLines = lines.filter((l: string) => l.trim().length > 0)
+    const minIndent = nonEmptyLines.length > 0
+      ? Math.min(...nonEmptyLines.map((l: string) => l.match(/^[ \t]*/)![0].length))
+      : 0
+    const dedented = lines
+      .map((l: string) => l.slice(minIndent))
+      .join('\n')
+      .trim()
+    return `> **${label}**\n>\n${dedented.split('\n').map((line: string) => `> ${line}`).join('\n')}\n`
+  })
 }
 
 interface TocEntry {
@@ -64,7 +94,7 @@ export function LectureDetailPage() {
 
   const contentWithoutTitle = useMemo(() => {
     if (!lecture?.content) return ''
-    return lecture.content.replace(/^#\s+.*(?:\n|$)/, '').trimStart()
+    return preprocessAdmonitions(lecture.content.replace(/^#\s+.*(?:\n|$)/, '').trimStart())
   }, [lecture?.content])
 
   const toc = useMemo<TocEntry[]>(() => {
@@ -156,11 +186,33 @@ export function LectureDetailPage() {
           p: ({ children }) => (
             <p className="text-base leading-relaxed text-foreground/90 mb-4">{children}</p>
           ),
-          blockquote: ({ children }) => (
-            <blockquote className="border-l-4 border-primary/30 pl-4 py-3 my-4 bg-secondary/30 rounded-r-lg text-sm text-muted-foreground">
-              {children}
-            </blockquote>
-          ),
+          blockquote: ({ children }) => {
+            const textContent = getTextFromChildren(children)
+            const isAdmonition = /Цитата|Примечание|Внимание|Важно/.test(textContent)
+            if (isAdmonition) {
+              const typeMatch = textContent.match(/Цитата|Примечание|Внимание|Важно/)
+              const type = typeMatch ? typeMatch[0] : ''
+              const styleMap: Record<string, { border: string; bg: string; iconBg: string; iconText: string }> = {
+                'Цитата': { border: 'border-l-4 border-primary/40', bg: 'bg-primary/5', iconBg: 'bg-primary/10', iconText: 'text-primary' },
+                'Примечание': { border: 'border-l-4 border-blue-400/50', bg: 'bg-blue-500/5', iconBg: 'bg-blue-500/10', iconText: 'text-blue-500' },
+                'Внимание': { border: 'border-l-4 border-amber-400/50', bg: 'bg-amber-500/5', iconBg: 'bg-amber-500/10', iconText: 'text-amber-500' },
+                'Важно': { border: 'border-l-4 border-red-400/50', bg: 'bg-red-500/5', iconBg: 'bg-red-500/10', iconText: 'text-red-500' },
+              }
+              const s = styleMap[type] || styleMap['Цитата']
+              return (
+                <blockquote className={`my-4 rounded-r-lg ${s.border} ${s.bg} [&>p:first-child]:font-semibold [&>p:first-child]:text-sm [&>p:first-child]:text-foreground/80 [&>p:first-child]:mb-2 [&>p:first-child]:border-b [&>p:first-child]:border-current/10 [&>p:first-child]:pb-2`}>
+                  <div className="px-4 pt-3 pb-2">
+                    {children}
+                  </div>
+                </blockquote>
+              )
+            }
+            return (
+              <blockquote className="border-l-4 border-primary/30 pl-4 py-3 my-4 bg-secondary/30 rounded-r-lg text-sm text-muted-foreground">
+                {children}
+              </blockquote>
+            )
+          },
           code: ({ className, children, ...props }) => {
             const match = /language-(\w+)/.exec(className || '')
             const codeStr = String(children).replace(/\n$/, '')
