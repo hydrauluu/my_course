@@ -41,8 +41,10 @@ services:
       GITHUB_CLIENT_ID: "${GITHUB_CLIENT_ID:-}"
       GITHUB_CLIENT_SECRET: "${GITHUB_CLIENT_SECRET:-}"
       GITHUB_WEBHOOK_SECRET: "${GITHUB_WEBHOOK_SECRET:-}"
+      GITHUB_BOT_TOKEN: "${GITHUB_BOT_TOKEN:-}"
       CLAUDE_API_KEY: "${CLAUDE_API_KEY:-}"
       SCR_DIR: "/scr"
+      TEACHER_GITHUB_USERNAME: "${TEACHER_GITHUB_USERNAME:-}"
     depends_on:
       db:
         condition: service_healthy
@@ -61,6 +63,7 @@ services:
       DATABASE_URL: "postgresql+asyncpg://postgres:postgres@db:5432/python_course"
       DATABASE_URL_SYNC: "postgresql+psycopg2://postgres:postgres@db:5432/python_course"
       REDIS_URL: "redis://redis:6379/0"
+      GITHUB_BOT_TOKEN: "${GITHUB_BOT_TOKEN:-}"
       CLAUDE_API_KEY: "${CLAUDE_API_KEY:-}"
       SCR_DIR: "/scr"
     depends_on:
