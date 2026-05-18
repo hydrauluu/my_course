@@ -13,6 +13,7 @@ class Student(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     github_username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    role: Mapped[str] = mapped_column(String(20), default="student")
     email: Mapped[str] = mapped_column(String(255), nullable=True)
     full_name: Mapped[str] = mapped_column(String(255), nullable=True)
     cohort_year: Mapped[int] = mapped_column(default=2026)

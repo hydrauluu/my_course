@@ -7,7 +7,7 @@ from app.database import get_db
 from app.models.lecture import Lecture
 from app.models.assignment import Assignment
 from app.schemas.lecture import LectureResponse, LectureCreate, LectureUpdate
-from app.services.auth import get_current_user
+from app.services.auth import get_current_user, get_current_teacher
 
 router = APIRouter(prefix="/api/lectures", tags=["lectures"])
 
@@ -56,7 +56,11 @@ async def get_lecture_by_number(number: int, db: AsyncSession = Depends(get_db))
 
 
 @router.post("", response_model=LectureResponse)
-async def create_lecture(lecture: LectureCreate, db: AsyncSession = Depends(get_db)):
+async def create_lecture(
+    lecture: LectureCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_teacher),
+):
     db_lecture = Lecture(**lecture.model_dump())
     db.add(db_lecture)
     await db.commit()
@@ -65,7 +69,12 @@ async def create_lecture(lecture: LectureCreate, db: AsyncSession = Depends(get_
 
 
 @router.patch("/{lecture_id}", response_model=LectureResponse)
-async def update_lecture(lecture_id: str, lecture: LectureUpdate, db: AsyncSession = Depends(get_db)):
+async def update_lecture(
+    lecture_id: str,
+    lecture: LectureUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_teacher),
+):
     result = await db.execute(select(Lecture).where(Lecture.id == lecture_id))
     db_lecture = result.scalar_one_or_none()
     if not db_lecture:

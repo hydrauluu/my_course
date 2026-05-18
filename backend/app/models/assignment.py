@@ -18,6 +18,7 @@ class Assignment(Base):
     branch_name: Mapped[str] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="open")
     pr_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    code_diff: Mapped[str | None] = mapped_column(Text, nullable=True)
     iteration_count: Mapped[int] = mapped_column(Integer, default=0)
     ai_level: Mapped[float | None] = mapped_column(Float, nullable=True)
     teacher_level: Mapped[float | None] = mapped_column(Float, nullable=True)

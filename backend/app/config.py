@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: str = ""
     GITHUB_REDIRECT_URI: str = "http://localhost:8000/api/auth/github/callback"
     GITHUB_WEBHOOK_SECRET: str = ""
+    GITHUB_BOT_TOKEN: str = ""
 
     CLAUDE_API_KEY: str = ""
     CLAUDE_MODEL: str = "claude-sonnet-4-20250514"

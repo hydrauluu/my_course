@@ -7,8 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import async_session, init_db
 from app.models.lecture import Lecture
+from app.models.student import Student
 
 SCR_DIR = os.environ.get("SCR_DIR", "/scr")
+TEACHER_GITHUB_USERNAME = os.environ.get("TEACHER_GITHUB_USERNAME", "")
 
 LECTURES = [
     {
@@ -161,6 +163,32 @@ def read_lecture_content(number: int) -> str | None:
     return None
 
 
+async def seed_teacher():
+    if not TEACHER_GITHUB_USERNAME:
+        return
+
+    await init_db()
+    async with async_session() as db:
+        result = await db.execute(
+            select(Student).where(Student.github_username == TEACHER_GITHUB_USERNAME)
+        )
+        existing = result.scalar_one_or_none()
+        if not existing:
+            teacher = Student(
+                github_username=TEACHER_GITHUB_USERNAME,
+                role="teacher",
+            )
+            db.add(teacher)
+            await db.commit()
+            print(f"  Created teacher account: {TEACHER_GITHUB_USERNAME}")
+        elif existing.role != "teacher":
+            existing.role = "teacher"
+            await db.commit()
+            print(f"  Updated {TEACHER_GITHUB_USERNAME} role to teacher")
+        else:
+            print(f"  Teacher account already exists: {TEACHER_GITHUB_USERNAME}")
+
+
 async def seed_lectures():
     await init_db()
     async with async_session() as db:
@@ -187,5 +215,10 @@ async def seed_lectures():
         print("Seed complete!")
 
 
+async def seed_all():
+    await seed_teacher()
+    await seed_lectures()
+
+
 if __name__ == "__main__":
-    asyncio.run(seed_lectures())
+    asyncio.run(seed_all())

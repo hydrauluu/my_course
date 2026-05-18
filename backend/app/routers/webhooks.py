@@ -11,10 +11,12 @@ from app.config import settings
 from app.models.student import Student
 from app.models.lecture import Lecture
 from app.models.assignment import Assignment
+from app.services.github import get_pr_diff
 
 router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
 
 BRANCH_PATTERN = re.compile(r"^hw(\d{2})/(.+)$")
+PR_URL_PATTERN = re.compile(r"https://github\.com/([^/]+/[^/]+)/pull/(\d+)")
 
 
 async def verify_webhook(request: Request):
@@ -34,6 +36,20 @@ async def verify_webhook(request: Request):
 
     if not hmac.compare_digest(f"sha256={expected}", signature):
         raise HTTPException(status_code=400, detail="Invalid signature")
+
+
+async def _fetch_pr_diff(pr_url: str) -> str | None:
+    if not settings.GITHUB_BOT_TOKEN:
+        return None
+    match = PR_URL_PATTERN.match(pr_url)
+    if not match:
+        return None
+    repo_full_name = match.group(1)
+    pr_number = int(match.group(2))
+    try:
+        return await get_pr_diff(repo_full_name, pr_number, settings.GITHUB_BOT_TOKEN)
+    except Exception:
+        return None
 
 
 @router.post("/github")
@@ -84,7 +100,10 @@ async def github_webhook(request: Request):
         if assignment:
             assignment.status = new_status
             assignment.pr_description = pr_description
-            if pr_state == "open" and action in ("opened", "synchronize", "edited"):
+            if action in ("opened", "synchronize", "edited"):
+                diff = await _fetch_pr_diff(pr_url)
+                if diff:
+                    assignment.code_diff = diff
                 assignment.iteration_count += 1
                 from app.services.celery_app import celery_app
                 celery_app.send_task("run_ai_review", args=[str(assignment.id)])
@@ -100,6 +119,8 @@ async def github_webhook(request: Request):
                 if not student:
                     return {"status": "ignored", "reason": "student not found"}
 
+                diff = await _fetch_pr_diff(pr_url)
+
                 assignment = Assignment(
                     lecture_id=lecture.id,
                     student_id=student.id,
@@ -107,11 +128,10 @@ async def github_webhook(request: Request):
                     branch_name=branch_name,
                     status="open",
                     pr_description=pr_description,
+                    code_diff=diff,
                     iteration_count=1,
                 )
                 db.add(assignment)
-                await db.commit()
-                await db.refresh(assignment)
 
                 from app.services.celery_app import celery_app
                 celery_app.send_task("run_ai_review", args=[str(assignment.id)])

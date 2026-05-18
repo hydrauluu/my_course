@@ -35,7 +35,7 @@ async def github_callback(code: str, db: AsyncSession = Depends(get_db)):
         await db.commit()
         await db.refresh(student)
 
-    jwt_token = create_access_token(student.id, student.github_username)
+    jwt_token = create_access_token(student.id, student.github_username, student.role)
     from app.config import settings
     return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?token={jwt_token}")
 
@@ -63,7 +63,7 @@ async def github_login(payload: GitHubLoginRequest, db: AsyncSession = Depends(g
         await db.commit()
         await db.refresh(student)
 
-    jwt_token = create_access_token(student.id, student.github_username)
+    jwt_token = create_access_token(student.id, student.github_username, student.role)
     return TokenResponse(access_token=jwt_token)
 
 

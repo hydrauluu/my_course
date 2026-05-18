@@ -41,7 +41,7 @@ async def _process_review(assignment_id: str):
         try:
             review_text = await run_ai_review(
                 assignment_type=lecture.assignment_type,
-                code_diff=None,
+                code_diff=assignment.code_diff,
                 pr_description=assignment.pr_description,
                 lecture_context=lecture_context,
             )
