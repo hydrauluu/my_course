@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import uuid
 
 from sqlalchemy import select
@@ -11,22 +12,23 @@ from app.models.lecture import Lecture
 from app.models.ai_review import AIReview
 from app.services.ai_review import run_ai_review, parse_review_response
 
+logger = logging.getLogger(__name__)
+
 
 @celery_app.task(name="run_ai_review")
 def run_ai_review_task(assignment_id: str):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(_process_review(assignment_id))
-    loop.close()
+    asyncio.run(_process_review(assignment_id))
 
 
 async def _process_review(assignment_id: str):
+    logger.info("Starting AI review for assignment %s", assignment_id)
     async with async_session() as db:
         result = await db.execute(
             select(Assignment).where(Assignment.id == uuid.UUID(assignment_id))
         )
         assignment = result.scalar_one_or_none()
         if not assignment:
+            logger.error("Assignment %s not found", assignment_id)
             return
 
         lecture_result = await db.execute(
@@ -34,6 +36,7 @@ async def _process_review(assignment_id: str):
         )
         lecture = lecture_result.scalar_one_or_none()
         if not lecture:
+            logger.error("Lecture not found for assignment %s", assignment_id)
             return
 
         lecture_context = f"Лекция {lecture.number}: {lecture.title}. {lecture.description or ''}"
@@ -63,8 +66,10 @@ async def _process_review(assignment_id: str):
             assignment.ai_level = parsed["predicted_level"]
             assignment.ai_comment = parsed["logic_comments"]
             assignment.needs_teacher = False
+            logger.info("AI review completed for assignment %s: level=%s", assignment_id, parsed["predicted_level"])
 
         except Exception as e:
+            logger.error("AI review failed for assignment %s: %s", assignment_id, e)
             review = AIReview(
                 assignment_id=assignment.id,
                 error_occurred=True,

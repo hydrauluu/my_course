@@ -1,3 +1,4 @@
+from uuid import UUID
 from pydantic import BaseModel
 
 
@@ -11,7 +12,7 @@ class TokenResponse(BaseModel):
 
 
 class UserInfo(BaseModel):
-    id: int
+    id: UUID
     github_username: str
     email: str | None = None
     full_name: str | None = None

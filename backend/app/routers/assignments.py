@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.models.assignment import Assignment
 from app.models.ai_review import AIReview
+from app.rate_limiter import limiter
 from app.schemas.assignment import AssignmentResponse
 from app.services.auth import get_current_user
 
@@ -49,7 +50,9 @@ async def get_assignment(
 
 
 @router.post("/{assignment_id}/review")
+@limiter.limit("5/minute")
 async def trigger_review(
+    request: Request,
     assignment_id: uuid.UUID,
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
