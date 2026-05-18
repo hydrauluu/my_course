@@ -12,6 +12,8 @@
 | Queue | Celery + Redis |
 | AI-ревью | Claude API (Anthropic) |
 | Auth | GitHub OAuth 2.0 |
+| Migrations | Alembic |
+| Testing | pytest (backend), Vitest (frontend) |
 | Design | Cafe Design System (#5D4432, #F9F7F5) |
 
 ## Быстрый старт
@@ -41,6 +43,7 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
 # Запустить PostgreSQL и Redis локально, затем:
+alembic upgrade head        # Применить миграции
 python -m app.seed          # Заполнить БД лекциями
 uvicorn app.main:app --reload --port 8000
 
@@ -55,6 +58,40 @@ cd frontend
 npm install
 npm run dev
 # Открыть http://localhost:5173
+```
+
+## Миграции базы данных
+
+Проект использует Alembic для управления миграциями:
+
+```bash
+# Применить все миграции
+alembic upgrade head
+
+# Создать новую миграцию после изменения моделей
+alembic revision --autogenerate -m "description"
+
+# Откатить последнюю миграцию
+alembic downgrade -1
+```
+
+## Тесты
+
+### Backend
+
+```bash
+cd backend
+pip install -r requirements.txt
+pytest
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm test          # Однократный запуск
+npm run test:watch # Режим наблюдения
 ```
 
 ## Структура проекта
@@ -98,8 +135,22 @@ npm run dev
 | POST | /api/webhooks/github | Webhook от GitHub |
 | GET | /api/dashboard/student | Дашборд студента |
 
+## Rate Limiting
+
+API endpoints защищены rate limiting:
+
+| Endpoint | Лимит |
+|---|---|
+| Auth (login, callback) | 10 req/min |
+| Webhook | 100 req/min |
+| Trigger review | 5 req/min |
+| Остальные | 60 req/min |
+
+Настройка через `RATE_LIMIT_ENABLED` и `RATE_LIMIT_DEFAULT` в `.env`.
+
 ## Этапы разработки
 
 - [x] **MVP** — Авторизация, лекции, GitHub webhook, AI-ревью, дашборд студента
+- [x] **Infrastructure** — Alembic миграции, тесты, логирование, rate limiting
 - [ ] **Аналитика** — Шкала 0-3, срезы, график динамики, дашборд преподавателя
 - [ ] **Полный функционал** — Редактор лекций, экспорт данных, финальное задание, уведомления

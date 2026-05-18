@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { api } from '@/services/api'
 import { Button } from '@/components/ui/button'
 import { GraduationCap, Github } from 'lucide-react'
 
@@ -18,8 +19,7 @@ export function LoginPage() {
   }, [isAuthenticated, navigate])
 
   useEffect(() => {
-    fetch('/api/auth/github/login')
-      .then(r => r.json())
+    api.auth.githubUrl()
       .then(data => setGitHubUrl(data.url))
       .catch(() => setError('Failed to connect to server'))
   }, [])

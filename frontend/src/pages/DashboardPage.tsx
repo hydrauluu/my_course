@@ -16,6 +16,7 @@ import {
   Minus,
   RefreshCw,
   CheckCircle2,
+  HelpCircle,
 } from 'lucide-react'
 
 const statusConfig: Record<string, { label: string; variant: 'success' | 'warning' | 'secondary' | 'destructive' }> = {
@@ -259,7 +260,10 @@ export function DashboardPage() {
               )}
               {latestReview.clarifying_question && (
                 <div className="bg-secondary/50 rounded-lg p-3 text-xs">
-                  <span className="font-medium text-foreground">❓ </span>
+                  <span className="font-medium text-foreground flex items-center gap-1 mb-1">
+                    <HelpCircle className="h-3 w-3" />
+                    Вопрос
+                  </span>
                   {latestReview.clarifying_question}
                 </div>
               )}

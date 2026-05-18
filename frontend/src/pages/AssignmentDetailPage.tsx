@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { ArrowLeft, Github, RefreshCw, Brain, GitPullRequest, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Github, RefreshCw, Brain, GitPullRequest, AlertCircle, HelpCircle } from 'lucide-react'
 
 const statusConfig: Record<string, { label: string; variant: 'success' | 'warning' | 'secondary' | 'destructive' }> = {
   open: { label: 'Открыт', variant: 'warning' },
@@ -198,7 +198,10 @@ export function AssignmentDetailPage() {
 
             {latestReview.clarifying_question && (
               <div className="bg-secondary/50 rounded-lg p-3 text-sm">
-                <span className="font-medium">❓ Вопрос: </span>
+                <span className="font-medium flex items-center gap-1.5 mb-1">
+                  <HelpCircle className="h-3.5 w-3.5 text-primary" />
+                  Вопрос
+                </span>
                 {latestReview.clarifying_question}
               </div>
             )}
