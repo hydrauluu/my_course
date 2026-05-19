@@ -1,23 +1,35 @@
 const API_BASE = '/api'
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('token')
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> || {}),
   }
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
+
+  const csrfCookie = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('csrf_token='))
+  if (csrfCookie) {
+    headers['X-CSRF-Token'] = decodeURIComponent(csrfCookie.split('=')[1])
   }
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers,
+    credentials: 'include',
   })
 
   if (!res.ok) {
-    const error = await res.text()
-    throw new Error(error || `Request failed: ${res.status}`)
+    let errorMessage = `Request failed: ${res.status}`
+    try {
+      const errorBody = await res.json()
+      errorMessage = errorBody.detail || errorBody.message || errorMessage
+    } catch {
+      errorMessage = await res.text() || errorMessage
+    }
+    const error = new Error(errorMessage)
+    ;(error as any).status = res.status
+    throw error
   }
 
   return res.json()
@@ -131,6 +143,5 @@ export const api = {
   },
   auth: {
     githubUrl: () => request<{ url: string }>('/auth/github/login'),
-    me: () => request('/auth/me'),
   },
 }

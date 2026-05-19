@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from '@/hooks/useAuth'
+import { ToastProvider } from '@/hooks/useToast'
 import { Layout } from '@/components/layout'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { LoginPage } from '@/pages/LoginPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { LecturesPage } from '@/pages/LecturesPage'
@@ -10,16 +12,18 @@ import { AssignmentDetailPage } from '@/pages/AssignmentDetailPage'
 export default function App() {
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route element={<Layout />}>
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/lectures" element={<LecturesPage />} />
-          <Route path="/lectures/:number" element={<LectureDetailPage />} />
-          <Route path="/assignments/:id" element={<AssignmentDetailPage />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+      <ToastProvider>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route element={<Layout />}>
+            <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+            <Route path="/lectures" element={<ProtectedRoute><LecturesPage /></ProtectedRoute>} />
+            <Route path="/lectures/:number" element={<ProtectedRoute><LectureDetailPage /></ProtectedRoute>} />
+            <Route path="/assignments/:id" element={<ProtectedRoute><AssignmentDetailPage /></ProtectedRoute>} />
+          </Route>
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </ToastProvider>
     </AuthProvider>
   )
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/hooks/useToast'
 import { api, type StudentDashboard } from '@/services/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -77,21 +77,19 @@ function BarChart({ data }: { data: { label: string; value: number | null; idx: 
 }
 
 export function DashboardPage() {
-  const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
+  const { addToast } = useToast()
   const [dashboard, setDashboard] = useState<StudentDashboard | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login')
-      return
-    }
     api.dashboard.student()
       .then(setDashboard)
-      .catch(console.error)
+      .catch((e) => {
+        addToast({ title: 'Ошибка загрузки', description: e.message, variant: 'destructive' })
+      })
       .finally(() => setLoading(false))
-  }, [isAuthenticated, navigate])
+  }, [])
 
   if (loading) {
     return (
@@ -134,7 +132,7 @@ export function DashboardPage() {
           <p className="text-sm text-muted-foreground mt-0.5">Обзор твоего прогресса на курсе</p>
         </div>
         <button
-          onClick={() => { setLoading(true); api.dashboard.student().then(setDashboard).catch(console.error).finally(() => setLoading(false)) }}
+          onClick={() => { setLoading(true); api.dashboard.student().then(setDashboard).catch((e) => addToast({ title: 'Ошибка обновления', description: e.message, variant: 'destructive' })).finally(() => setLoading(false)) }}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <RefreshCw className="h-3.5 w-3.5" />

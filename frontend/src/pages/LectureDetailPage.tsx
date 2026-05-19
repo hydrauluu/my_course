@@ -2,9 +2,11 @@ import { useEffect, useState, useMemo, useRef, isValidElement, type ReactNode } 
 import { useParams, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeSanitize from 'rehype-sanitize'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { cafeCodeTheme } from '@/styles/cafe-code-theme'
 import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/hooks/useToast'
 import { api, type Lecture } from '@/services/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -57,10 +59,12 @@ interface TocEntry {
 }
 
 export function LectureDetailPage() {
-  const { isAuthenticated, loading: authLoading } = useAuth()
+  const { loading: authLoading } = useAuth()
+  const { addToast } = useToast()
   const navigate = useNavigate()
   const { number } = useParams()
   const [lecture, setLecture] = useState<Lecture | null>(null)
+  const [totalLectures, setTotalLectures] = useState(13)
   const [loading, setLoading] = useState(true)
   const [activeHeading, setActiveHeading] = useState('')
   const contentRef = useRef<HTMLDivElement>(null)
@@ -71,20 +75,25 @@ export function LectureDetailPage() {
 
   useEffect(() => {
     if (authLoading) return
-    if (!isAuthenticated) {
-      navigate('/login')
-      return
-    }
     if (number !== undefined) {
       setLoading(true)
       setLecture(null)
       setActiveHeading('')
       api.lectures.byNumber(parseInt(number))
-        .then(setLecture)
-        .catch(console.error)
+        .then((data) => {
+          setLecture(data)
+          api.lectures.list().then((lectures) => {
+            if (lectures.length > 0) {
+              setTotalLectures(Math.max(...lectures.map((l) => l.number)))
+            }
+          }).catch((e) => addToast({ title: 'Ошибка', description: 'Не удалось загрузить список лекций', variant: 'destructive' }))
+        })
+        .catch((e) => {
+          addToast({ title: 'Ошибка загрузки', description: e.message, variant: 'destructive' })
+        })
         .finally(() => setLoading(false))
     }
-  }, [isAuthenticated, authLoading, navigate, number])
+  }, [authLoading, navigate, number])
 
   useEffect(() => {
     if (lecture) {
@@ -157,6 +166,7 @@ export function LectureDetailPage() {
     return (
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeSanitize]}
         components={{
           h2: ({ children, ...props }) => {
             const text = String(children)
@@ -372,8 +382,8 @@ export function LectureDetailPage() {
                 Лекция {lecture.number - 1}
               </Button>
             ) : <div />}
-            <span className="text-xs text-muted-foreground">{lecture.number} / 13</span>
-            {lecture.number < 13 ? (
+            <span className="text-xs text-muted-foreground">{lecture.number} / {totalLectures}</span>
+            {lecture.number < totalLectures ? (
               <Button variant="outline" size="sm" onClick={() => navigate(`/lectures/${lecture.number + 1}`)}>
                 Лекция {lecture.number + 1}
                 <ChevronRight className="h-4 w-4 ml-1" />

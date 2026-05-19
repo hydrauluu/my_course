@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { api } from '@/services/api'
 import { Button } from '@/components/ui/button'
 import { GraduationCap, Github } from 'lucide-react'
 
 export function LoginPage() {
-  const { login, isAuthenticated, loading } = useAuth()
+  const { isAuthenticated, loading } = useAuth()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
   const [githubUrl, setGitHubUrl] = useState('')
   const [error, setError] = useState('')
 
@@ -23,21 +22,6 @@ export function LoginPage() {
       .then(data => setGitHubUrl(data.url))
       .catch(() => setError('Failed to connect to server'))
   }, [])
-
-  useEffect(() => {
-    const token = searchParams.get('token')
-    if (token) {
-      localStorage.setItem('token', token)
-      window.location.href = '/dashboard'
-      return
-    }
-    const code = searchParams.get('code')
-    if (code) {
-      login(code)
-        .then(() => navigate('/dashboard'))
-        .catch(() => setError('Authentication failed'))
-    }
-  }, [searchParams])
 
   if (loading) {
     return (

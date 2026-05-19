@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/hooks/useToast'
 import { api, type Assignment } from '@/services/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -16,26 +16,23 @@ const statusConfig: Record<string, { label: string; variant: 'success' | 'warnin
 }
 
 export function AssignmentDetailPage() {
-  const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
+  const { addToast } = useToast()
   const { id } = useParams()
   const [assignment, setAssignment] = useState<Assignment | null>(null)
   const [loading, setLoading] = useState(true)
   const [reviewing, setReviewing] = useState(false)
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login')
-      return
-    }
-
     if (id) {
       api.assignments.get(id)
         .then(setAssignment)
-        .catch(console.error)
+        .catch((e) => {
+          addToast({ title: 'Ошибка загрузки', description: e.message, variant: 'destructive' })
+        })
         .finally(() => setLoading(false))
     }
-  }, [isAuthenticated, navigate, id])
+  }, [id])
 
   const handleTriggerReview = async () => {
     if (!id) return
@@ -44,8 +41,9 @@ export function AssignmentDetailPage() {
       await api.assignments.triggerReview(id)
       const updated = await api.assignments.get(id)
       setAssignment(updated)
-    } catch (e) {
-      console.error(e)
+      addToast({ title: 'Ревью запущено', description: 'AI-проверка началась', variant: 'default' })
+    } catch (e: any) {
+      addToast({ title: 'Ошибка', description: e.message, variant: 'destructive' })
     } finally {
       setReviewing(false)
     }

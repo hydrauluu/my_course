@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/hooks/useToast'
 import { api, type BlockData } from '@/services/api'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -16,22 +16,19 @@ const blockColors = [
 const blockIcons = [BookOpen, BookOpen, Code, FileText]
 
 export function LecturesPage() {
-  const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
+  const { addToast } = useToast()
   const [blocks, setBlocks] = useState<BlockData[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login')
-      return
-    }
-
     api.lectures.byBlock()
       .then(setBlocks)
-      .catch(console.error)
+      .catch((e) => {
+        addToast({ title: 'Ошибка загрузки', description: e.message, variant: 'destructive' })
+      })
       .finally(() => setLoading(false))
-  }, [isAuthenticated, navigate])
+  }, [])
 
   if (loading) {
     return (
