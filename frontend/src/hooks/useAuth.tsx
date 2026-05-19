@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react'
 
 interface User {
+  id: string
   github_username: string
   email: string | null
   full_name: string | null
@@ -9,10 +10,9 @@ interface User {
 
 interface AuthContextType {
   user: User | null
-  token: string | null
   loading: boolean
-  login: (code: string) => Promise<void>
-  logout: () => void
+  login: () => void
+  logout: () => Promise<void>
   isAuthenticated: boolean
 }
 
@@ -20,60 +20,46 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'))
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (token) {
-      fetchUser(token)
-    } else {
-      setLoading(false)
-    }
-  }, [token])
+    fetchUser()
+  }, [])
 
-  async function fetchUser(t: string) {
+  async function fetchUser() {
     try {
-      const res = await fetch('/api/auth/me', {
-        headers: { Authorization: `Bearer ${t}` },
-      })
+      const res = await fetch('/api/auth/me', { credentials: 'include' })
       if (res.ok) {
         const data = await res.json()
         setUser(data)
       } else {
-        localStorage.removeItem('token')
-        setToken(null)
+        setUser(null)
       }
     } catch {
-      localStorage.removeItem('token')
-      setToken(null)
+      setUser(null)
     } finally {
       setLoading(false)
     }
   }
 
-  async function login(code: string) {
-    const res = await fetch('/api/auth/github/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code }),
-    })
-    const data = await res.json()
-    localStorage.setItem('token', data.access_token)
-    setToken(data.access_token)
-    await fetchUser(data.access_token)
+  function login() {
+    window.location.href = '/api/auth/github/login'
   }
 
-  function logout() {
-    localStorage.removeItem('token')
-    setToken(null)
+  async function logout() {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+    } catch {
+      // ignore
+    }
     setUser(null)
+    window.location.href = '/login'
   }
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        token,
         loading,
         login,
         logout,
