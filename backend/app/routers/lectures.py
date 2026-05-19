@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.models.lecture import Lecture
@@ -14,13 +13,17 @@ router = APIRouter(prefix="/api/lectures", tags=["lectures"])
 
 @router.get("", response_model=list[LectureResponse])
 async def get_lectures(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Lecture).order_by(Lecture.number))
+    result = await db.execute(
+        select(Lecture).where(Lecture.is_published == True).order_by(Lecture.number)
+    )
     return result.scalars().all()
 
 
 @router.get("/blocks")
 async def get_lectures_by_block(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Lecture).order_by(Lecture.number))
+    result = await db.execute(
+        select(Lecture).where(Lecture.is_published == True).order_by(Lecture.number)
+    )
     lectures = result.scalars().all()
 
     blocks = {}
