@@ -5,13 +5,13 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import async_session, init_db
+from app.database import async_session, check_db_connection
 from app.models.lecture import Lecture
 from app.models.student import Student
 
 SCR_DIR = os.environ.get("SCR_DIR", "/scr")
 TEACHER_GITHUB_USERNAME = os.environ.get("TEACHER_GITHUB_USERNAME", "")
-SEED_UPDATE_CONTENT = os.environ.get("SEED_UPDATE_CONTENT", "0").lower() in ("1", "true", "yes")
+SEED_UPDATE_CONTENT = os.environ.get("SEED_UPDATE_CONTENT", "1").lower() in ("1", "true", "yes")
 
 LECTURES = [
     {
@@ -168,7 +168,7 @@ async def seed_teacher():
     if not TEACHER_GITHUB_USERNAME:
         return
 
-    await init_db()
+    await check_db_connection()
     async with async_session() as db:
         result = await db.execute(
             select(Student).where(Student.github_username == TEACHER_GITHUB_USERNAME)
@@ -191,7 +191,7 @@ async def seed_teacher():
 
 
 async def seed_lectures():
-    await init_db()
+    await check_db_connection()
     async with async_session() as db:
         for lecture_data in LECTURES:
             result = await db.execute(
