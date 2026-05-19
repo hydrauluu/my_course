@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,8 +8,8 @@ from app.config import settings
 from app.database import get_db
 from app.models.student import Student
 from app.rate_limiter import limiter
-from app.schemas.auth import GitHubLoginRequest, TokenResponse, UserInfo
-from app.services.auth import create_access_token, get_current_user
+from app.schemas.auth import GitHubLoginRequest, UserInfo
+from app.services.auth import create_access_token, get_current_user, set_auth_cookie, set_csrf_cookie, clear_auth_cookie, verify_csrf
 from app.services.github import exchange_code_for_token, get_github_user
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,10 @@ async def _authenticate_student(code: str, db: AsyncSession) -> Student:
 async def github_callback(request: Request, code: str, db: AsyncSession = Depends(get_db)):
     student = await _authenticate_student(code, db)
     jwt_token = create_access_token(student.id, student.github_username, student.role)
-    return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?token={jwt_token}")
+    response = RedirectResponse(url=f"{settings.FRONTEND_URL}/dashboard", status_code=302)
+    set_auth_cookie(response, jwt_token)
+    set_csrf_cookie(response)
+    return response
 
 
 @router.post("/github/login")
@@ -55,7 +58,10 @@ async def github_callback(request: Request, code: str, db: AsyncSession = Depend
 async def github_login(request: Request, payload: GitHubLoginRequest, db: AsyncSession = Depends(get_db)):
     student = await _authenticate_student(payload.code, db)
     jwt_token = create_access_token(student.id, student.github_username, student.role)
-    return TokenResponse(access_token=jwt_token)
+    response = Response(status_code=200)
+    set_auth_cookie(response, jwt_token)
+    set_csrf_cookie(response)
+    return response
 
 
 @router.get("/me", response_model=UserInfo)
@@ -69,7 +75,15 @@ async def get_me(current_user: dict = Depends(get_current_user), db: AsyncSessio
         github_username=student.github_username,
         email=student.email,
         full_name=student.full_name,
+        role=student.role,
     )
+
+
+@router.post("/logout")
+async def logout(request: Request, response: Response):
+    await verify_csrf(request)
+    clear_auth_cookie(response)
+    return {"status": "ok"}
 
 
 @router.get("/github/login")

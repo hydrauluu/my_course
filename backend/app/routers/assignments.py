@@ -10,7 +10,7 @@ from app.models.assignment import Assignment
 from app.models.ai_review import AIReview
 from app.rate_limiter import limiter
 from app.schemas.assignment import AssignmentResponse
-from app.services.auth import get_current_user
+from app.services.auth import get_current_user, verify_csrf
 
 router = APIRouter(prefix="/api/assignments", tags=["assignments"])
 
@@ -57,6 +57,7 @@ async def trigger_review(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await verify_csrf(request)
     result = await db.execute(
         select(Assignment).where(
             Assignment.id == assignment_id,

@@ -7,7 +7,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
-from app.database import init_db
+from app.database import check_db_connection
 from app.logging_config import setup_logging
 from app.middleware import RequestIDMiddleware
 from app.rate_limiter import limiter
@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting application")
-    await init_db()
-    logger.info("Database initialized")
+    await check_db_connection()
+    logger.info("Database connection verified")
     yield
     logger.info("Shutting down application")
 
