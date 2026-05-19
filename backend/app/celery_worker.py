@@ -9,7 +9,7 @@ from app.config import settings
 from app.models.assignment import Assignment
 from app.models.lecture import Lecture
 from app.models.ai_review import AIReview
-from app.services.ai_review import parse_review_response
+from app.services.ai_review import parse_review_response, mock_review
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ SyncSession = sessionmaker(bind=sync_engine)
 
 def _run_ai_review_sync(assignment_type: str, code_diff: str | None, pr_description: str | None, lecture_context: str) -> str:
     if not settings.CLAUDE_API_KEY:
-        return _mock_review(assignment_type, pr_description)
+        return mock_review(assignment_type, pr_description)
 
     try:
         from anthropic import Anthropic
@@ -44,25 +44,6 @@ def _run_ai_review_sync(assignment_type: str, code_diff: str | None, pr_descript
         return response.content[0].text
     except Exception as e:
         raise Exception(f"Claude API error: {str(e)}")
-
-
-def _mock_review(assignment_type: str, pr_description: str | None) -> str:
-    if assignment_type == "A":
-        return (
-            "✅ Код запускается без ошибок\n"
-            "✅ Тесты пройдены (3/3)\n"
-            "📝 Стиль: хороший идиоматичный код, но можно использовать list comprehension\n"
-            "💡 Концепция лекции: правильно применён протокол итерации\n"
-            "❓ Вопрос: Почему ты выбрал именно этот подход?"
-        )
-    else:
-        return (
-            "📄 Объяснение прочитано из PR description\n"
-            "📊 Уровень понимания (предварительно): 2 — Цель\n"
-            "   Ты описываешь что делает функция — это хорошо.\n"
-            "   Чтобы выйти на уровень 3, объясни в каком контексте системы она вызывается.\n"
-            "❓ Вопрос: Почему Django использует здесь __new__ вместо __init__?"
-        )
 
 
 @celery_app.task(name="run_ai_review", bind=True, max_retries=3, default_retry_delay=60)

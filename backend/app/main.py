@@ -54,4 +54,19 @@ app.include_router(dashboard.router)
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": "1.0.0"}
+    checks = {"database": "ok", "redis": "ok"}
+    try:
+        await check_db_connection()
+    except Exception:
+        checks["database"] = "error"
+
+    try:
+        import redis.asyncio as aioredis
+        r = aioredis.from_url(settings.REDIS_URL)
+        await r.ping()
+        await r.close()
+    except Exception:
+        checks["redis"] = "error"
+
+    status = "ok" if all(v == "ok" for v in checks.values()) else "degraded"
+    return {"status": status, "version": "1.0.0", "checks": checks}
