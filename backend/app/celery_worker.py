@@ -1,48 +1,95 @@
-import asyncio
 import logging
 import uuid
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.services.celery_app import celery_app
-from app.database import async_session
+from app.config import settings
 from app.models.assignment import Assignment
 from app.models.lecture import Lecture
 from app.models.ai_review import AIReview
-from app.services.ai_review import run_ai_review, parse_review_response
+from app.services.ai_review import parse_review_response
 
 logger = logging.getLogger(__name__)
 
-
-@celery_app.task(name="run_ai_review")
-def run_ai_review_task(assignment_id: str):
-    asyncio.run(_process_review(assignment_id))
+sync_engine = create_engine(settings.DATABASE_URL_SYNC.replace("postgresql+psycopg2://", "postgresql://"))
+SyncSession = sessionmaker(bind=sync_engine)
 
 
-async def _process_review(assignment_id: str):
+def _run_ai_review_sync(assignment_type: str, code_diff: str | None, pr_description: str | None, lecture_context: str) -> str:
+    if not settings.CLAUDE_API_KEY:
+        return _mock_review(assignment_type, pr_description)
+
+    try:
+        from anthropic import Anthropic
+
+        client = Anthropic(api_key=settings.CLAUDE_API_KEY)
+
+        user_content = f"Контекст лекции: {lecture_context}\n\n"
+        if assignment_type == "A" and code_diff:
+            user_content += f"Код из PR (diff):\n{code_diff}\n\n"
+        elif assignment_type == "B" and pr_description:
+            user_content += f"PR description (объяснение студента):\n{pr_description}\n\n"
+
+        response = client.messages.create(
+            model=settings.CLAUDE_MODEL,
+            max_tokens=2000,
+            system=(
+                "Ты — AI-ассистент преподавателя курса Python Engineering Course. "
+                "Твоя задача — анализировать домашние задания студентов."
+            ),
+            messages=[{"role": "user", "content": user_content}],
+        )
+        return response.content[0].text
+    except Exception as e:
+        raise Exception(f"Claude API error: {str(e)}")
+
+
+def _mock_review(assignment_type: str, pr_description: str | None) -> str:
+    if assignment_type == "A":
+        return (
+            "✅ Код запускается без ошибок\n"
+            "✅ Тесты пройдены (3/3)\n"
+            "📝 Стиль: хороший идиоматичный код, но можно использовать list comprehension\n"
+            "💡 Концепция лекции: правильно применён протокол итерации\n"
+            "❓ Вопрос: Почему ты выбрал именно этот подход?"
+        )
+    else:
+        return (
+            "📄 Объяснение прочитано из PR description\n"
+            "📊 Уровень понимания (предварительно): 2 — Цель\n"
+            "   Ты описываешь что делает функция — это хорошо.\n"
+            "   Чтобы выйти на уровень 3, объясни в каком контексте системы она вызывается.\n"
+            "❓ Вопрос: Почему Django использует здесь __new__ вместо __init__?"
+        )
+
+
+@celery_app.task(name="run_ai_review", bind=True, max_retries=3, default_retry_delay=60)
+def run_ai_review_task(self, assignment_id: str):
     logger.info("Starting AI review for assignment %s", assignment_id)
-    async with async_session() as db:
-        result = await db.execute(
-            select(Assignment).where(Assignment.id == uuid.UUID(assignment_id))
-        )
-        assignment = result.scalar_one_or_none()
-        if not assignment:
-            logger.error("Assignment %s not found", assignment_id)
-            return
 
-        lecture_result = await db.execute(
-            select(Lecture).where(Lecture.id == assignment.lecture_id)
-        )
-        lecture = lecture_result.scalar_one_or_none()
-        if not lecture:
-            logger.error("Lecture not found for assignment %s", assignment_id)
-            return
+    try:
+        with SyncSession() as db:
+            result = db.execute(
+                select(Assignment).where(Assignment.id == uuid.UUID(assignment_id))
+            )
+            assignment = result.scalar_one_or_none()
+            if not assignment:
+                logger.error("Assignment %s not found", assignment_id)
+                return
 
-        lecture_context = f"Лекция {lecture.number}: {lecture.title}. {lecture.description or ''}"
+            lecture_result = db.execute(
+                select(Lecture).where(Lecture.id == assignment.lecture_id)
+            )
+            lecture = lecture_result.scalar_one_or_none()
+            if not lecture:
+                logger.error("Lecture not found for assignment %s", assignment_id)
+                return
 
-        try:
-            review_text = await run_ai_review(
+            lecture_context = f"Лекция {lecture.number}: {lecture.title}. {lecture.description or ''}"
+
+            review_text = _run_ai_review_sync(
                 assignment_type=lecture.assignment_type,
                 code_diff=assignment.code_diff,
                 pr_description=assignment.pr_description,
@@ -68,14 +115,26 @@ async def _process_review(assignment_id: str):
             assignment.needs_teacher = False
             logger.info("AI review completed for assignment %s: level=%s", assignment_id, parsed["predicted_level"])
 
-        except Exception as e:
-            logger.error("AI review failed for assignment %s: %s", assignment_id, e)
-            review = AIReview(
-                assignment_id=assignment.id,
-                error_occurred=True,
-                raw_response=f"Error: {str(e)}",
-            )
-            assignment.needs_teacher = True
+            db.add(review)
+            db.commit()
 
-        db.add(review)
-        await db.commit()
+    except Exception as e:
+        logger.error("AI review failed for assignment %s: %s", assignment_id, e)
+        try:
+            with SyncSession() as db:
+                result = db.execute(
+                    select(Assignment).where(Assignment.id == uuid.UUID(assignment_id))
+                )
+                assignment = result.scalar_one_or_none()
+                if assignment:
+                    review = AIReview(
+                        assignment_id=assignment.id,
+                        error_occurred=True,
+                        raw_response=f"Error: {str(e)}",
+                    )
+                    assignment.needs_teacher = True
+                    db.add(review)
+                    db.commit()
+        except Exception as db_error:
+            logger.error("Failed to save error review for assignment %s: %s", assignment_id, db_error)
+        self.retry(exc=e)
