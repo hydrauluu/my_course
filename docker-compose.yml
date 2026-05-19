@@ -45,9 +45,12 @@ services:
       CLAUDE_API_KEY: "${CLAUDE_API_KEY:-}"
       SCR_DIR: "/scr"
       TEACHER_GITHUB_USERNAME: "${TEACHER_GITHUB_USERNAME:-}"
-      SEED_UPDATE_CONTENT: "${SEED_UPDATE_CONTENT:-0}"
+      SEED_UPDATE_CONTENT: "${SEED_UPDATE_CONTENT:-1}"
       RATE_LIMIT_ENABLED: "${RATE_LIMIT_ENABLED:-true}"
       RATE_LIMIT_DEFAULT: "${RATE_LIMIT_DEFAULT:-60/minute}"
+      COOKIE_SECURE: "${COOKIE_SECURE:-false}"
+      CSRF_ENABLED: "${CSRF_ENABLED:-true}"
+      JWT_SECRET: "${JWT_SECRET:-}"
     depends_on:
       db:
         condition: service_healthy
@@ -57,7 +60,9 @@ services:
       - ./backend:/app
       - ./scr:/scr
     command: >
-      sh -c "python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+      sh -c "alembic upgrade head &&
+             python -m app.seed &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
   celery_worker:
     build:
@@ -77,7 +82,7 @@ services:
     volumes:
       - ./backend:/app
       - ./scr:/scr
-    command: celery -A app.celery_worker.celery_app worker --loglevel=info --pool=solo
+    command: celery -A app.celery_worker.celery_app worker --loglevel=info
 
   frontend:
     build:
