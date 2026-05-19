@@ -3,17 +3,10 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
-class StudentBase(BaseModel):
+class StudentResponse(BaseModel):
     github_username: str
     email: str | None = None
     full_name: str | None = None
-
-
-class StudentCreate(StudentBase):
-    pass
-
-
-class StudentResponse(StudentBase):
     id: uuid.UUID
     cohort_year: int
     entry_slice_score: float | None = None
@@ -22,11 +15,3 @@ class StudentResponse(StudentBase):
 
     class Config:
         from_attributes = True
-
-
-class StudentDashboard(BaseModel):
-    student: StudentResponse
-    total_lectures: int
-    completed_lectures: int
-    assignments: list[dict]
-    latest_review: dict | None = None

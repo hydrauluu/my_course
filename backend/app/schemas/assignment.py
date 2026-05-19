@@ -3,19 +3,6 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
-class AssignmentBase(BaseModel):
-    lecture_id: uuid.UUID
-    student_id: uuid.UUID
-    github_pr_url: str | None = None
-    branch_name: str | None = None
-    status: str = "open"
-    pr_description: str | None = None
-
-
-class AssignmentCreate(AssignmentBase):
-    pass
-
-
 class AIReviewResponse(BaseModel):
     id: uuid.UUID
     triggered_at: datetime
@@ -52,9 +39,3 @@ class AssignmentResponse(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-class WebhookPayload(BaseModel):
-    action: str
-    pull_request: dict
-    repository: dict
