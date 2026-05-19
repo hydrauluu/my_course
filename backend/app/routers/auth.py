@@ -1,4 +1,5 @@
 import logging
+import secrets
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
@@ -14,6 +15,8 @@ from app.services.github import exchange_code_for_token, get_github_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+OAUTH_STATE_COOKIE = "github_oauth_state"
 
 
 async def _authenticate_student(code: str, db: AsyncSession) -> Student:
@@ -44,12 +47,17 @@ async def _authenticate_student(code: str, db: AsyncSession) -> Student:
 
 @router.get("/github/callback")
 @limiter.limit("10/minute")
-async def github_callback(request: Request, code: str, db: AsyncSession = Depends(get_db)):
+async def github_callback(request: Request, code: str, state: str, db: AsyncSession = Depends(get_db)):
+    cookie_state = request.cookies.get(OAUTH_STATE_COOKIE)
+    if not cookie_state or not secrets.compare_digest(cookie_state, state):
+        raise HTTPException(status_code=400, detail="Invalid OAuth state")
+
     student = await _authenticate_student(code, db)
     jwt_token = create_access_token(student.id, student.github_username, student.role)
     response = RedirectResponse(url=f"{settings.FRONTEND_URL}/dashboard", status_code=302)
     set_auth_cookie(response, jwt_token)
     set_csrf_cookie(response)
+    response.delete_cookie(key=OAUTH_STATE_COOKIE, path="/")
     return response
 
 
@@ -80,6 +88,7 @@ async def get_me(current_user: dict = Depends(get_current_user), db: AsyncSessio
 
 
 @router.post("/logout")
+@limiter.limit("30/minute")
 async def logout(request: Request, response: Response):
     await verify_csrf(request)
     clear_auth_cookie(response)
@@ -87,7 +96,17 @@ async def logout(request: Request, response: Response):
 
 
 @router.get("/github/login")
-async def github_login_url():
+async def github_login_url(response: Response):
+    state = secrets.token_urlsafe(32)
+    response.set_cookie(
+        key=OAUTH_STATE_COOKIE,
+        value=state,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite="lax",
+        max_age=600,
+        path="/",
+    )
     return {
-        "url": f"https://github.com/login/oauth/authorize?client_id={settings.GITHUB_CLIENT_ID}&redirect_uri={settings.GITHUB_REDIRECT_URI}&scope=user:email,repo"
+        "url": f"https://github.com/login/oauth/authorize?client_id={settings.GITHUB_CLIENT_ID}&redirect_uri={settings.GITHUB_REDIRECT_URI}&scope=user:email,repo&state={state}"
     }
