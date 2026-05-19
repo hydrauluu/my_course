@@ -35,7 +35,7 @@ REVIEW_SYSTEM_PROMPT = """Ты — AI-ассистент преподавате�
 
 async def run_ai_review(assignment_type: str, code_diff: str | None, pr_description: str | None, lecture_context: str) -> str:
     if not settings.CLAUDE_API_KEY:
-        return _mock_review(assignment_type, pr_description)
+        return mock_review(assignment_type, pr_description)
 
     try:
         from anthropic import AsyncAnthropic
@@ -102,7 +102,7 @@ def parse_review_response(response: str, assignment_type: str) -> dict:
     return result
 
 
-def _mock_review(assignment_type: str, pr_description: str | None) -> str:
+def mock_review(assignment_type: str, pr_description: str | None) -> str:
     if assignment_type == "A":
         return (
             "✅ Код запускается без ошибок\n"
