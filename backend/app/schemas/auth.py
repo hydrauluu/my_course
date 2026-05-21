@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 class GitHubLoginRequest(BaseModel):
     code: str
+    state: str = ""
 
 
 class UserInfo(BaseModel):
