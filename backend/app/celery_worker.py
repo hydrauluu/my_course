@@ -1,20 +1,17 @@
 import logging
 import uuid
 
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import select
 
 from app.services.celery_app import celery_app
 from app.config import settings
+from app.database import SyncSession
 from app.models.assignment import Assignment
 from app.models.lecture import Lecture
 from app.models.ai_review import AIReview
 from app.services.ai_review import parse_review_response, mock_review
 
 logger = logging.getLogger(__name__)
-
-sync_engine = create_engine(settings.DATABASE_URL_SYNC.replace("postgresql+psycopg2://", "postgresql://"))
-SyncSession = sessionmaker(bind=sync_engine)
 
 
 def _run_ai_review_sync(assignment_type: str, code_diff: str | None, pr_description: str | None, lecture_context: str) -> str:

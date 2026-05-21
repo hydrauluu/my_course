@@ -64,6 +64,10 @@ async def github_callback(request: Request, code: str, state: str, db: AsyncSess
 @router.post("/github/login")
 @limiter.limit("10/minute")
 async def github_login(request: Request, payload: GitHubLoginRequest, db: AsyncSession = Depends(get_db)):
+    await verify_csrf(request)
+    cookie_state = request.cookies.get(OAUTH_STATE_COOKIE)
+    if not cookie_state or not secrets.compare_digest(cookie_state, payload.state):
+        raise HTTPException(status_code=400, detail="Invalid OAuth state")
     student = await _authenticate_student(payload.code, db)
     jwt_token = create_access_token(student.id, student.github_username, student.role)
     response = Response(status_code=200)
