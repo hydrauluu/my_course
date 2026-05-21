@@ -42,7 +42,9 @@ async def get_lectures_by_block(db: AsyncSession = Depends(get_db)):
 
 @router.get("/{lecture_id}", response_model=LectureResponse)
 async def get_lecture(lecture_id: str, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Lecture).where(Lecture.id == lecture_id))
+    result = await db.execute(
+        select(Lecture).where(Lecture.id == lecture_id, Lecture.is_published == True)
+    )
     lecture = result.scalar_one_or_none()
     if not lecture:
         raise HTTPException(status_code=404, detail="Lecture not found")
@@ -51,7 +53,9 @@ async def get_lecture(lecture_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.get("/number/{number}", response_model=LectureResponse)
 async def get_lecture_by_number(number: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Lecture).where(Lecture.number == number))
+    result = await db.execute(
+        select(Lecture).where(Lecture.number == number, Lecture.is_published == True)
+    )
     lecture = result.scalar_one_or_none()
     if not lecture:
         raise HTTPException(status_code=404, detail="Lecture not found")
