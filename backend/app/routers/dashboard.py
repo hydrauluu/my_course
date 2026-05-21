@@ -16,7 +16,9 @@ async def student_dashboard(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    lectures_result = await db.execute(select(Lecture).order_by(Lecture.number))
+    lectures_result = await db.execute(
+        select(Lecture).where(Lecture.is_published == True).order_by(Lecture.number)
+    )
     lectures = {l.id: l for l in lectures_result.scalars().all()}
 
     assignments_result = await db.execute(
