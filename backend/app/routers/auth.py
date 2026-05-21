@@ -1,5 +1,8 @@
 import logging
 import secrets
+from datetime import datetime, timezone
+
+from jose import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
@@ -10,7 +13,16 @@ from app.database import get_db
 from app.models.student import Student
 from app.rate_limiter import limiter
 from app.schemas.auth import GitHubLoginRequest, UserInfo
-from app.services.auth import create_access_token, get_current_user, set_auth_cookie, set_csrf_cookie, clear_auth_cookie, verify_csrf
+from app.services.auth import (
+    COOKIE_NAME,
+    create_access_token,
+    get_current_user,
+    set_auth_cookie,
+    set_csrf_cookie,
+    clear_auth_cookie,
+    verify_csrf,
+    _blacklist_token,
+)
 from app.services.github import exchange_code_for_token, get_github_user
 
 logger = logging.getLogger(__name__)
@@ -95,6 +107,18 @@ async def get_me(current_user: dict = Depends(get_current_user), db: AsyncSessio
 @limiter.limit("30/minute")
 async def logout(request: Request, response: Response):
     await verify_csrf(request)
+    token = request.cookies.get(COOKIE_NAME)
+    if token:
+        try:
+            payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+            jti = payload.get("jti")
+            exp = payload.get("exp")
+            if jti and exp:
+                remaining = int(exp - datetime.now(timezone.utc).timestamp())
+                if remaining > 0:
+                    _blacklist_token(jti, remaining)
+        except Exception:
+            logger.warning("Failed to blacklist token during logout")
     clear_auth_cookie(response)
     return {"status": "ok"}
 

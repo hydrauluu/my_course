@@ -1,5 +1,6 @@
 import uuid
 import secrets
+import logging
 from datetime import datetime, timedelta, timezone
 
 from jose import JWTError, jwt
@@ -8,19 +9,62 @@ from fastapi.security import HTTPBearer
 
 from app.config import settings
 
+logger = logging.getLogger(__name__)
 security = HTTPBearer(auto_error=False)
 
 COOKIE_NAME = "auth_token"
 CSRF_COOKIE_NAME = "csrf_token"
 CSRF_HEADER_NAME = "x-csrf-token"
 
+_redis_client = None
+
+
+def _get_redis():
+    global _redis_client
+    if _redis_client is None:
+        try:
+            import redis
+            _redis_client = redis.from_url(
+                settings.REDIS_URL,
+                socket_connect_timeout=2,
+                socket_timeout=2,
+                decode_responses=True,
+            )
+            _redis_client.ping()
+        except Exception:
+            logger.warning("Redis unavailable, token blacklist disabled")
+            _redis_client = None
+    return _redis_client
+
+
+def _blacklist_token(jti: str, ttl: int):
+    r = _get_redis()
+    if r:
+        try:
+            r.setex(f"token_blacklist:{jti}", ttl, "1")
+        except Exception as e:
+            logger.error("Failed to blacklist token: %s", e)
+
+
+def _is_token_blacklisted(jti: str) -> bool:
+    r = _get_redis()
+    if not r:
+        return False
+    try:
+        return bool(r.exists(f"token_blacklist:{jti}"))
+    except Exception:
+        return False
+
 
 def create_access_token(student_id: uuid.UUID, github_username: str, role: str = "student") -> str:
-    expire = datetime.now(timezone.utc) + timedelta(hours=settings.JWT_EXPIRATION_HOURS)
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(hours=settings.JWT_EXPIRATION_HOURS)
     payload = {
         "sub": str(student_id),
         "github_username": github_username,
         "role": role,
+        "iat": now,
+        "jti": str(uuid.uuid4()),
         "exp": expire,
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
@@ -71,6 +115,9 @@ async def verify_csrf(request: Request):
 def _decode_token(token: str) -> dict:
     try:
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        jti = payload.get("jti")
+        if jti and _is_token_blacklisted(jti):
+            raise HTTPException(status_code=401, detail="Token revoked")
         return {
             "student_id": uuid.UUID(payload["sub"]),
             "github_username": payload["github_username"],
