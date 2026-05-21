@@ -1,13 +1,13 @@
 import uuid
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class AIReviewResponse(BaseModel):
     id: uuid.UUID
     triggered_at: datetime
     runs_without_errors: bool | None = None
-    tests_passed: str | None = None
+    tests_passed: str | None = Field(default=None, max_length=50)
     style_comments: str | None = None
     logic_comments: str | None = None
     clarifying_question: str | None = None
@@ -22,9 +22,9 @@ class AssignmentResponse(BaseModel):
     id: uuid.UUID
     lecture_id: uuid.UUID
     student_id: uuid.UUID
-    github_pr_url: str | None = None
-    branch_name: str | None = None
-    status: str
+    github_pr_url: str | None = Field(default=None, max_length=500)
+    branch_name: str | None = Field(default=None, max_length=255)
+    status: str = Field(max_length=20)
     pr_description: str | None = None
     iteration_count: int
     ai_level: float | None = None

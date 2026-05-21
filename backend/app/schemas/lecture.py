@@ -1,17 +1,17 @@
 import uuid
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class LectureBase(BaseModel):
     number: int
-    title: str
+    title: str = Field(max_length=255)
     block: int
-    description: str | None = None
-    topics: str | None = None
-    real_code_link: str | None = None
-    assignment_type: str
-    assignment_description: str | None = None
+    description: str | None = Field(default=None, max_length=10000)
+    topics: str | None = Field(default=None, max_length=5000)
+    real_code_link: str | None = Field(default=None, max_length=500)
+    assignment_type: str = Field(max_length=1, pattern=r"^[ABC]$")
+    assignment_description: str | None = Field(default=None, max_length=5000)
 
 
 class LectureCreate(LectureBase):
@@ -19,10 +19,10 @@ class LectureCreate(LectureBase):
 
 
 class LectureUpdate(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    assignment_type: str | None = None
-    assignment_description: str | None = None
+    title: str | None = Field(default=None, max_length=255)
+    description: str | None = Field(default=None, max_length=10000)
+    assignment_type: str | None = Field(default=None, max_length=1, pattern=r"^[ABC]$")
+    assignment_description: str | None = Field(default=None, max_length=5000)
     content: str | None = None
     is_published: bool | None = None
     lecture_date: datetime | None = None
