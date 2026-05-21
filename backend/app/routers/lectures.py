@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,7 +43,7 @@ async def get_lectures_by_block(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{lecture_id}", response_model=LectureResponse)
-async def get_lecture(lecture_id: str, db: AsyncSession = Depends(get_db)):
+async def get_lecture(lecture_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Lecture).where(Lecture.id == lecture_id, Lecture.is_published == True)
     )
@@ -77,7 +79,7 @@ async def create_lecture(
 
 @router.patch("/{lecture_id}", response_model=LectureResponse)
 async def update_lecture(
-    lecture_id: str,
+    lecture_id: uuid.UUID,
     lecture: LectureUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_teacher),
