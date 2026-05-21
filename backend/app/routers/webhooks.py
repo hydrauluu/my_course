@@ -155,6 +155,11 @@ def process_webhook_event(payload: dict):
 @limiter.limit("100/minute")
 async def github_webhook(request: Request):
     await verify_webhook(request)
+
+    content_length = request.headers.get("Content-Length")
+    if content_length and int(content_length) > 1_048_576:
+        raise HTTPException(status_code=413, detail="Payload too large")
+
     payload = await request.json()
 
     process_webhook_event.delay(payload)
