@@ -143,5 +143,6 @@ export const api = {
   },
   auth: {
     githubUrl: () => request<{ url: string }>('/auth/github/login'),
+    logout: () => request<{ status: string }>('/auth/logout', { method: 'POST' }),
   },
 }
