@@ -9,14 +9,14 @@ from app.database import SyncSession
 from app.models.assignment import Assignment
 from app.models.lecture import Lecture
 from app.models.ai_review import AIReview
-from app.services.ai_review import parse_review_response, mock_review
+from app.services.ai_review import parse_review_response
 
 logger = logging.getLogger(__name__)
 
 
 def _run_ai_review_sync(assignment_type: str, code_diff: str | None, pr_description: str | None, lecture_context: str) -> str:
     if not settings.CLAUDE_API_KEY:
-        return mock_review(assignment_type, pr_description)
+        raise ValueError("CLAUDE_API_KEY not configured — cannot run AI review")
 
     try:
         from anthropic import Anthropic
