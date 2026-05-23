@@ -5,7 +5,20 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.responses import Response
 
+from fastapi.responses import JSONResponse
+
 logger = logging.getLogger(__name__)
+
+MAX_BODY_SIZE = 10 * 1024 * 1024  # 10MB
+
+
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        if request.method in ("POST", "PUT", "PATCH"):
+            cl = request.headers.get("Content-Length")
+            if cl and int(cl) > MAX_BODY_SIZE:
+                return JSONResponse(status_code=413, content={"detail": "Request too large"})
+        return await call_next(request)
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
