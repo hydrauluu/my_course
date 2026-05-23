@@ -9,7 +9,7 @@ from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.database import check_db_connection
 from app.logging_config import setup_logging
-from app.middleware import RequestIDMiddleware
+from app.middleware import RequestIDMiddleware, RequestSizeLimitMiddleware
 from app.rate_limiter import limiter
 from app.routers import auth, lectures, assignments, webhooks, dashboard
 
@@ -53,6 +53,7 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+app.add_middleware(RequestSizeLimitMiddleware)
 app.add_middleware(RequestIDMiddleware)
 
 app.add_middleware(
@@ -71,7 +72,8 @@ app.include_router(dashboard.router)
 
 
 @app.get("/api/health")
-async def health():
+@limiter.limit("60/minute")
+async def health(request: Request):
     checks = {"database": "ok", "redis": "ok"}
     try:
         await check_db_connection()

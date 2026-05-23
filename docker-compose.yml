@@ -42,7 +42,7 @@ services:
       GITHUB_CLIENT_SECRET: "${GITHUB_CLIENT_SECRET:-}"
       GITHUB_WEBHOOK_SECRET: "${GITHUB_WEBHOOK_SECRET:-}"
       GITHUB_BOT_TOKEN: "${GITHUB_BOT_TOKEN:-}"
-      CLAUDE_API_KEY: "${CLAUDE_API_KEY:-}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
       SCR_DIR: "/scr"
       TEACHER_GITHUB_USERNAME: "${TEACHER_GITHUB_USERNAME:-}"
       SEED_UPDATE_CONTENT: "${SEED_UPDATE_CONTENT:-1}"
@@ -72,8 +72,9 @@ services:
       DATABASE_URL_SYNC: "postgresql+psycopg2://postgres:postgres@db:5432/python_course"
       REDIS_URL: "redis://redis:6379/0"
       GITHUB_BOT_TOKEN: "${GITHUB_BOT_TOKEN:-}"
-      CLAUDE_API_KEY: "${CLAUDE_API_KEY:-}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
       SCR_DIR: "/scr"
+      JWT_SECRET: "${JWT_SECRET:-}"
     depends_on:
       db:
         condition: service_healthy

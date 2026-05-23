@@ -18,7 +18,7 @@ class Lecture(Base):
     description: Mapped[str] = mapped_column(Text, nullable=True)
     topics: Mapped[str] = mapped_column(Text, nullable=True)
     real_code_link: Mapped[str] = mapped_column(String(500), nullable=True)
-    assignment_type: Mapped[str] = mapped_column(String(1), nullable=False)
+    assignment_type: Mapped[str] = mapped_column(String(2), nullable=False)
     assignment_description: Mapped[str] = mapped_column(Text, nullable=True)
     content: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False)

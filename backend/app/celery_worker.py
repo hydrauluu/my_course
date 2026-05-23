@@ -9,38 +9,42 @@ from app.database import SyncSession
 from app.models.assignment import Assignment
 from app.models.lecture import Lecture
 from app.models.ai_review import AIReview
-from app.services.ai_review import parse_review_response
+from app.services.ai_review import REVIEW_SYSTEM_PROMPT, parse_review_response
 
 logger = logging.getLogger(__name__)
 
 
 def _run_ai_review_sync(assignment_type: str, code_diff: str | None, pr_description: str | None, lecture_context: str) -> str:
-    if not settings.CLAUDE_API_KEY:
-        raise ValueError("CLAUDE_API_KEY not configured — cannot run AI review")
+    if not settings.GEMINI_API_KEY:
+        raise ValueError("GEMINI_API_KEY not configured — cannot run AI review")
 
     try:
-        from anthropic import Anthropic
+        from google import genai
 
-        client = Anthropic(api_key=settings.CLAUDE_API_KEY)
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
         user_content = f"Контекст лекции: {lecture_context}\n\n"
         if assignment_type == "A" and code_diff:
             user_content += f"Код из PR (diff):\n{code_diff}\n\n"
         elif assignment_type == "B" and pr_description:
             user_content += f"PR description (объяснение студента):\n{pr_description}\n\n"
+        elif assignment_type == "AB":
+            if code_diff:
+                user_content += f"Код из PR (diff):\n{code_diff}\n\n"
+            if pr_description:
+                user_content += f"PR description (объяснение студента):\n{pr_description}\n\n"
 
-        response = client.messages.create(
-            model=settings.CLAUDE_MODEL,
-            max_tokens=2000,
-            system=(
-                "Ты — AI-ассистент преподавателя курса Python Engineering Course. "
-                "Твоя задача — анализировать домашние задания студентов."
+        response = client.models.generate_content(
+            model=settings.GEMINI_MODEL,
+            contents=user_content,
+            config=genai.types.GenerateContentConfig(
+                system_instruction=REVIEW_SYSTEM_PROMPT,
+                max_output_tokens=2000,
             ),
-            messages=[{"role": "user", "content": user_content}],
         )
-        return response.content[0].text
+        return response.text
     except Exception as e:
-        raise Exception(f"Claude API error: {str(e)}")
+        raise Exception(f"Gemini API error: {str(e)}")
 
 
 @celery_app.task(name="run_ai_review", bind=True, max_retries=3, default_retry_delay=60)

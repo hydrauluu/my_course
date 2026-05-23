@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     GITHUB_WEBHOOK_SECRET: str = ""
     GITHUB_BOT_TOKEN: str = ""
 
-    CLAUDE_API_KEY: str = ""
-    CLAUDE_MODEL: str = "claude-sonnet-4-20250514"
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
 
     JWT_SECRET: str = ""
     JWT_ALGORITHM: str = "HS256"

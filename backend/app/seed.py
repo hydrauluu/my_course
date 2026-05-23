@@ -70,8 +70,8 @@ LECTURES = [
         "block": 2,
         "description": "yield, generator expressions, generator functions, itertools, yield from, send, throw, close",
         "topics": "yield, generator expressions, itertools, send, throw, close, yield from",
-        "assignment_type": "A",
-        "assignment_description": "Напиши генератор для бесконечной последовательности и используй itertools",
+        "assignment_type": "AB",
+        "assignment_description": "Напиши генератор для бесконечной последовательности, используй itertools и объясни свой код",
         "is_published": True,
     },
     {
@@ -110,8 +110,8 @@ LECTURES = [
         "block": 3,
         "description": "type, metaclasses, __new__, __init_subclass__, structural pattern matching (match/case)",
         "topics": "metaclass, type, __new__, __init_subclass__, match/case, PEP 634",
-        "assignment_type": "A",
-        "assignment_description": "Напиши простой метакласс или используй match/case для разбора структуры",
+        "assignment_type": "AB",
+        "assignment_description": "Напиши простой метакласс, используй match/case для разбора структуры и объясни свой код",
         "is_published": True,
     },
     {
@@ -211,6 +211,9 @@ async def seed_lectures():
                     if content and content != existing.content:
                         existing.content = content
                         print(f"  Updated content for lecture {lecture_data['number']}")
+                    if lecture_data.get("assignment_type") and lecture_data["assignment_type"] != existing.assignment_type:
+                        existing.assignment_type = lecture_data["assignment_type"]
+                        print(f"  Updated assignment_type for lecture {lecture_data['number']}: {lecture_data['assignment_type']}")
                 print(f"  Lecture {lecture_data['number']} already exists")
 
         await db.commit()
