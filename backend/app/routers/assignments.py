@@ -16,7 +16,9 @@ router = APIRouter(prefix="/api/assignments", tags=["assignments"])
 
 
 @router.get("", response_model=list[AssignmentResponse])
+@limiter.limit("60/minute")
 async def get_assignments(
+    request: Request,
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -30,7 +32,9 @@ async def get_assignments(
 
 
 @router.get("/{assignment_id}", response_model=AssignmentResponse)
+@limiter.limit("60/minute")
 async def get_assignment(
+    request: Request,
     assignment_id: uuid.UUID,
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

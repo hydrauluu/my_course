@@ -89,7 +89,8 @@ async def github_login(request: Request, payload: GitHubLoginRequest, db: AsyncS
 
 
 @router.get("/me", response_model=UserInfo)
-async def get_me(current_user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+@limiter.limit("60/minute")
+async def get_me(request: Request, current_user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Student).where(Student.id == current_user["student_id"]))
     student = result.scalar_one_or_none()
     if not student:
@@ -124,7 +125,8 @@ async def logout(request: Request, response: Response):
 
 
 @router.get("/github/login")
-async def github_login_url(response: Response):
+@limiter.limit("60/minute")
+async def github_login_url(request: Request, response: Response):
     state = secrets.token_urlsafe(32)
     response.set_cookie(
         key=OAUTH_STATE_COOKIE,

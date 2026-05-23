@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,13 +8,15 @@ from app.database import get_db
 from app.models.lecture import Lecture
 from app.models.assignment import Assignment
 from app.schemas.lecture import LectureResponse, LectureCreate, LectureUpdate
-from app.services.auth import get_current_user, get_current_teacher
+from app.rate_limiter import limiter
+from app.services.auth import get_current_user, get_current_teacher, verify_csrf
 
 router = APIRouter(prefix="/api/lectures", tags=["lectures"])
 
 
 @router.get("", response_model=list[LectureResponse])
-async def get_lectures(db: AsyncSession = Depends(get_db)):
+@limiter.limit("60/minute")
+async def get_lectures(request: Request, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Lecture).where(Lecture.is_published == True).order_by(Lecture.number)
     )
@@ -22,7 +24,8 @@ async def get_lectures(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/blocks")
-async def get_lectures_by_block(db: AsyncSession = Depends(get_db)):
+@limiter.limit("60/minute")
+async def get_lectures_by_block(request: Request, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Lecture).where(Lecture.is_published == True).order_by(Lecture.number)
     )
@@ -43,7 +46,8 @@ async def get_lectures_by_block(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{lecture_id}", response_model=LectureResponse)
-async def get_lecture(lecture_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+@limiter.limit("60/minute")
+async def get_lecture(request: Request, lecture_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Lecture).where(Lecture.id == lecture_id, Lecture.is_published == True)
     )
@@ -54,7 +58,8 @@ async def get_lecture(lecture_id: uuid.UUID, db: AsyncSession = Depends(get_db))
 
 
 @router.get("/number/{number}", response_model=LectureResponse)
-async def get_lecture_by_number(number: int, db: AsyncSession = Depends(get_db)):
+@limiter.limit("60/minute")
+async def get_lecture_by_number(request: Request, number: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Lecture).where(Lecture.number == number, Lecture.is_published == True)
     )
@@ -65,11 +70,14 @@ async def get_lecture_by_number(number: int, db: AsyncSession = Depends(get_db))
 
 
 @router.post("", response_model=LectureResponse)
+@limiter.limit("30/minute")
 async def create_lecture(
+    request: Request,
     lecture: LectureCreate,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_teacher),
 ):
+    await verify_csrf(request)
     db_lecture = Lecture(**lecture.model_dump())
     db.add(db_lecture)
     await db.commit()
@@ -78,12 +86,15 @@ async def create_lecture(
 
 
 @router.patch("/{lecture_id}", response_model=LectureResponse)
+@limiter.limit("30/minute")
 async def update_lecture(
+    request: Request,
     lecture_id: uuid.UUID,
     lecture: LectureUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_teacher),
 ):
+    await verify_csrf(request)
     result = await db.execute(select(Lecture).where(Lecture.id == lecture_id))
     db_lecture = result.scalar_one_or_none()
     if not db_lecture:

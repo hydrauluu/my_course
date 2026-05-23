@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -6,13 +6,16 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.models.lecture import Lecture
 from app.models.assignment import Assignment
+from app.rate_limiter import limiter
 from app.services.auth import get_current_user
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 
 @router.get("/student")
+@limiter.limit("60/minute")
 async def student_dashboard(
+    request: Request,
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

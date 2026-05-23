@@ -26,12 +26,12 @@ PR_URL_PATTERN = re.compile(r"https://github\.com/([^/]+/[^/]+)/pull/(\d+)")
 
 async def verify_webhook(request: Request):
     if not settings.GITHUB_WEBHOOK_SECRET:
-        raise HTTPException(
-            status_code=503,
-            detail="Webhook secret not configured. Set GITHUB_WEBHOOK_SECRET in environment.",
-        )
+        raise HTTPException(status_code=503, detail="Webhook processing unavailable")
 
     body = await request.body()
+    if len(body) > 1_048_576:
+        raise HTTPException(status_code=413, detail="Payload too large")
+
     signature = request.headers.get("X-Hub-Signature-256")
     if not signature:
         raise HTTPException(status_code=400, detail="Missing signature")
@@ -156,11 +156,10 @@ def process_webhook_event(payload: dict):
 async def github_webhook(request: Request):
     await verify_webhook(request)
 
-    content_length = request.headers.get("Content-Length")
-    if content_length and int(content_length) > 1_048_576:
-        raise HTTPException(status_code=413, detail="Payload too large")
-
-    payload = await request.json()
+    try:
+        payload = await request.json()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
     process_webhook_event.delay(payload)
 
