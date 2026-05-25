@@ -74,9 +74,12 @@ class TestLectures:
 
     @pytest.mark.asyncio
     async def test_create_lecture_as_teacher(self, client, teacher_headers):
+        import secrets
+        csrf_token = secrets.token_urlsafe(32)
         response = await client.post(
             "/api/lectures",
-            headers=teacher_headers,
+            headers={**teacher_headers, "X-CSRF-Token": csrf_token},
+            cookies={"csrf_token": csrf_token},
             json={"number": 10, "title": "New Lecture", "block": 4, "assignment_type": "A"},
         )
         assert response.status_code == 200
@@ -100,14 +103,17 @@ class TestLectures:
 
     @pytest.mark.asyncio
     async def test_update_lecture_as_teacher(self, client, teacher_headers, db_session):
+        import secrets
         from app.models.lecture import Lecture
         lecture = Lecture(number=8, title="Old Title", block=3, assignment_type="B", is_published=True)
         db_session.add(lecture)
         await db_session.commit()
+        csrf_token = secrets.token_urlsafe(32)
 
         response = await client.patch(
             f"/api/lectures/{lecture.id}",
-            headers=teacher_headers,
+            headers={**teacher_headers, "X-CSRF-Token": csrf_token},
+            cookies={"csrf_token": csrf_token},
             json={"title": "Updated Title"},
         )
         assert response.status_code == 200

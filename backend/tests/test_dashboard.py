@@ -5,7 +5,7 @@ class TestDashboard:
     @pytest.mark.asyncio
     async def test_dashboard_unauthorized(self, client):
         response = await client.get("/api/dashboard/student")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_dashboard_empty(self, client, auth_headers, db_session):
@@ -30,6 +30,11 @@ class TestDashboard:
     ):
         from app.models.assignment import Assignment
         from app.models.ai_review import AIReview
+        from app.models.student import Student
+
+        student = Student(id=student_id, github_username="testuser")
+        db_session.add(student)
+        await db_session.flush()
 
         assignment = Assignment(
             lecture_id=seeded_lecture.id,

@@ -18,13 +18,17 @@ class TestAuthEndpoints:
 
     @pytest.mark.asyncio
     async def test_github_callback_creates_user(self, client, mock_github_exchange, mock_github_user):
-        response = await client.get("/api/auth/github/callback", params={"code": "test-code"})
-        assert response.status_code in (200, 307)
+        response = await client.get(
+            "/api/auth/github/callback",
+            params={"code": "test-code", "state": "test-state"},
+            headers={"Cookie": "github_oauth_state=test-state"},
+        )
+        assert response.status_code in (200, 302, 307)
 
     @pytest.mark.asyncio
     async def test_get_me_unauthorized(self, client):
         response = await client.get("/api/auth/me")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_get_me_with_token(self, client, auth_headers, student_id, db_session):
@@ -54,27 +58,78 @@ class TestAuthDependencies:
     @pytest.mark.asyncio
     async def test_get_current_teacher_rejects_student(self, student_id):
         token = create_access_token(student_id, "testuser", "student")
-        from fastapi.security import HTTPAuthorizationCredentials
-        creds = HTTPAuthorizationCredentials(credentials=token, scheme="Bearer")
+
+        class MockRequest:
+            cookies = {"auth_token": token}
+            headers = {}
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_teacher(creds)
+            await get_current_teacher(MockRequest())
         assert exc_info.value.status_code == 403
 
     @pytest.mark.asyncio
     async def test_get_current_teacher_accepts_teacher(self, teacher_id):
         token = create_access_token(teacher_id, "teacher_user", "teacher")
-        from fastapi.security import HTTPAuthorizationCredentials
-        creds = HTTPAuthorizationCredentials(credentials=token, scheme="Bearer")
 
-        result = await get_current_teacher(creds)
+        class MockRequest:
+            cookies = {"auth_token": token}
+            headers = {}
+
+        result = await get_current_teacher(MockRequest())
         assert result["role"] == "teacher"
 
     @pytest.mark.asyncio
     async def test_get_current_teacher_accepts_admin(self, teacher_id):
         token = create_access_token(teacher_id, "admin_user", "admin")
-        from fastapi.security import HTTPAuthorizationCredentials
-        creds = HTTPAuthorizationCredentials(credentials=token, scheme="Bearer")
 
-        result = await get_current_teacher(creds)
+        class MockRequest:
+            cookies = {"auth_token": token}
+            headers = {}
+
+        result = await get_current_teacher(MockRequest())
         assert result["role"] == "admin"
+
+
+class TestLogout:
+    @pytest.mark.asyncio
+    async def test_logout_requires_csrf(self, client, auth_headers, student_token):
+        response = await client.post(
+            "/api/auth/logout",
+            headers=auth_headers,
+            cookies={"auth_token": student_token},
+        )
+        assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_logout_success(self, client, student_token):
+        import secrets
+        csrf_token = secrets.token_urlsafe(32)
+        response = await client.post(
+            "/api/auth/logout",
+            headers={"X-CSRF-Token": csrf_token},
+            cookies={
+                "auth_token": student_token,
+                "csrf_token": csrf_token,
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+
+    @pytest.mark.asyncio
+    async def test_logout_clears_cookies(self, client, student_token):
+        import secrets
+        csrf_token = secrets.token_urlsafe(32)
+        response = await client.post(
+            "/api/auth/logout",
+            headers={"X-CSRF-Token": csrf_token},
+            cookies={
+                "auth_token": student_token,
+                "csrf_token": csrf_token,
+            },
+        )
+        assert response.status_code == 200
+        set_cookie_header = response.headers.get("set-cookie", "")
+        assert "auth_token=" in set_cookie_header
+        assert "csrf_token=" in set_cookie_header
+

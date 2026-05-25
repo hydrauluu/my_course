@@ -38,14 +38,14 @@ def mock_claude():
 
 @pytest.fixture(autouse=True)
 def mock_github_exchange():
-    with patch("app.services.github.exchange_code_for_token", new_callable=AsyncMock) as mock:
+    with patch("app.routers.auth.exchange_code_for_token", new_callable=AsyncMock) as mock:
         mock.return_value = {"access_token": "test-gh-token"}
         yield mock
 
 
 @pytest.fixture(autouse=True)
 def mock_github_user():
-    with patch("app.services.github.get_github_user", new_callable=AsyncMock) as mock:
+    with patch("app.routers.auth.get_github_user", new_callable=AsyncMock) as mock:
         mock.return_value = {"login": "testuser", "email": "test@example.com", "name": "Test User"}
         yield mock
 

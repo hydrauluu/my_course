@@ -5,7 +5,7 @@ class TestAssignments:
     @pytest.mark.asyncio
     async def test_list_assignments_unauthorized(self, client):
         response = await client.get("/api/assignments")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_list_assignments_empty(self, client, auth_headers):
@@ -62,9 +62,12 @@ class TestAssignments:
 
     @pytest.mark.asyncio
     async def test_trigger_review(self, client, auth_headers, seeded_assignment, mock_celery):
+        import secrets
+        csrf_token = secrets.token_urlsafe(32)
         response = await client.post(
             f"/api/assignments/{seeded_assignment.id}/review",
-            headers=auth_headers,
+            headers={**auth_headers, "X-CSRF-Token": csrf_token},
+            cookies={"csrf_token": csrf_token},
         )
         assert response.status_code == 200
         mock_celery.assert_called_once()
