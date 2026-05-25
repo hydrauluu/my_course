@@ -1,3 +1,5 @@
+import type { PrismTheme } from 'react-syntax-highlighter'
+
 const theme: Record<string, React.CSSProperties> = {
   'code[class*="language-"]': {
     color: '#3E2B1E',
@@ -65,4 +67,4 @@ const theme: Record<string, React.CSSProperties> = {
   italic: { fontStyle: 'italic' },
 }
 
-export const cafeCodeTheme: any = theme
+export const cafeCodeTheme: PrismTheme = theme  as PrismTheme

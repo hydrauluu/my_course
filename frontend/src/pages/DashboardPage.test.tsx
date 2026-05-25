@@ -11,7 +11,13 @@ vi.mock('@/hooks/useAuth', () => ({
   }),
 }))
 
-const mockDashboard = {
+vi.mock('@/hooks/useToast', () => ({
+  useToast: () => ({
+    addToast: vi.fn(),
+  }),
+}))
+
+const mockDashboard = vi.hoisted(() => ({
   total_lectures: 14,
   completed_lectures: 5,
   progress_percentage: 36,
@@ -44,22 +50,21 @@ const mockDashboard = {
     clarifying_question: 'Почему выбран этот подход?',
     triggered_at: '2026-01-01T00:00:00Z',
   },
-}
+}))
+
+vi.mock('@/services/api', () => ({
+  api: {
+    dashboard: {
+      student: vi.fn().mockResolvedValue(mockDashboard),
+    },
+  },
+}))
 
 const renderWithRouter = (component: React.ReactNode) => {
   return render(<BrowserRouter>{component}</BrowserRouter>)
 }
 
 describe('DashboardPage', () => {
-  beforeEach(() => {
-    vi.mock('@/services/api', () => ({
-      api: {
-        dashboard: {
-          student: vi.fn().mockResolvedValue(mockDashboard),
-        },
-      },
-    }))
-  })
 
   it('renders the dashboard title', async () => {
     renderWithRouter(<DashboardPage />)
