@@ -8,9 +8,7 @@ from app.config import settings
 engine = create_async_engine(settings.DATABASE_URL, echo=False)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-sync_engine = create_engine(
-    settings.DATABASE_URL_SYNC.replace("postgresql+psycopg2://", "postgresql://")
-)
+sync_engine = create_engine(settings.DATABASE_URL_SYNC)
 SyncSession = sessionmaker(bind=sync_engine)
 
 
