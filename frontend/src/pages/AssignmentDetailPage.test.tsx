@@ -7,7 +7,6 @@ vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({
     isAuthenticated: true,
     loading: false,
-    login: vi.fn(),
   }),
 }))
 

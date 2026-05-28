@@ -153,7 +153,7 @@ export function AssignmentDetailPage() {
       </div>
 
       {assignment.needs_teacher && (
-        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg mb-6 text-sm text-amber-800">
+        <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg mb-6 text-sm text-amber-700 dark:text-amber-300">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           Это задание требует проверки преподавателем
         </div>

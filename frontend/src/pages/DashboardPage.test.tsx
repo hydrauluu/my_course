@@ -7,7 +7,6 @@ vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({
     isAuthenticated: true,
     loading: false,
-    login: vi.fn(),
   }),
 }))
 
@@ -78,7 +77,7 @@ describe('DashboardPage', () => {
     await waitFor(() => {
       expect(screen.getByText('5')).toBeInTheDocument()
     })
-    expect(screen.getByText('/ 14')).toBeInTheDocument()
+    expect(screen.getByText('из 14')).toBeInTheDocument()
   })
 
   it('shows the assignments table header', async () => {

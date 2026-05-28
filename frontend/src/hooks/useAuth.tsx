@@ -12,7 +12,6 @@ interface User {
 interface AuthContextType {
   user: User | null
   loading: boolean
-  login: () => void
   logout: () => Promise<void>
   isAuthenticated: boolean
 }
@@ -43,10 +42,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function login() {
-    window.location.href = '/api/auth/github/login'
-  }
-
   async function logout() {
     try {
       await api.auth.logout()
@@ -62,7 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         loading,
-        login,
         logout,
         isAuthenticated: !!user,
       }}

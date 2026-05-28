@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useRef, type ReactNode } from 'react'
 
 interface Toast {
   id: string
@@ -17,9 +17,10 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined)
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
+  const idCounter = useRef(1)
 
   const addToast = useCallback((toast: Omit<Toast, 'id'>) => {
-    const id = Math.random().toString(36).slice(2)
+    const id = String(idCounter.current++)
     setToasts((prev) => [...prev, { ...toast, id }])
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id))
@@ -33,7 +34,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ toasts, addToast, removeToast }}>
       {children}
-      <div className="fixed bottom-4 right-4 z-50 space-y-2 max-w-sm">
+      <div role="alert" aria-live="polite" className="fixed bottom-4 right-4 z-50 space-y-2 max-w-sm">
         {toasts.map((toast) => (
           <div
             key={toast.id}

@@ -26,17 +26,17 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-[#F9F7F5]">
-          <div className="rounded-lg bg-white p-8 shadow-md">
-            <h2 className="mb-4 text-2xl font-semibold text-[#5D4432]">
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <div className="rounded-lg bg-card p-8 shadow-sm">
+            <h2 className="mb-4 text-2xl font-semibold text-foreground">
               Что-то пошло не так
             </h2>
-            <p className="mb-4 text-gray-600">
+            <p className="mb-4 text-muted-foreground">
               Произошла непредвиденная ошибка. Попробуйте обновить страницу.
             </p>
             <button
               type="button"
-              className="rounded bg-[#5D4432] px-4 py-2 text-white hover:bg-[#4a3628]"
+              className="rounded bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
               onClick={() => window.location.reload()}
             >
               Обновить страницу

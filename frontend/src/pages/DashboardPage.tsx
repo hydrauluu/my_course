@@ -1,22 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { api, type StudentDashboard } from '@/services/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Button } from '@/components/ui/button'
 import {
   BookOpen,
-  GitPullRequest,
   Brain,
   AlertCircle,
   TrendingUp,
-  ArrowUpRight,
-  ArrowDownRight,
-  Minus,
+  GitPullRequest,
   RefreshCw,
-  CheckCircle2,
   HelpCircle,
+  GraduationCap,
+  ArrowRight,
 } from 'lucide-react'
 
 const statusConfig: Record<string, { label: string; variant: 'success' | 'warning' | 'secondary' | 'destructive' }> = {
@@ -35,8 +35,14 @@ function BarChart({ data }: { data: { label: string; value: number | null; idx: 
 
   return (
     <div className="w-full overflow-x-auto">
-      <svg width={Math.max(data.length * (barW + 8) + 40, 320)} height="200" className="block">
-        <line x1="40" y1="172" x2={Math.max(data.length * (barW + 8) + 30, 310)} y2="172" stroke="#E9E3DD" />
+      <svg
+        width={Math.max(data.length * (barW + 8) + 40, 320)}
+        height="200"
+        className="block"
+        role="img"
+        aria-label={`График динамики уровня понимания по лекциям: ${data.map(d => `лекция ${d.label} — ${d.value !== null ? `${d.value}/3` : 'нет данных'}`).join(', ')}`}
+      >
+        <line x1="40" y1="172" x2={Math.max(data.length * (barW + 8) + 30, 310)} y2="172" className="stroke-border" />
 
         {[0, 1, 2, 3].map((lv) => {
           const y = 172 - (lv / maxVal) * 140
@@ -45,7 +51,7 @@ function BarChart({ data }: { data: { label: string; value: number | null; idx: 
               <text x="36" y={y + 4} textAnchor="end" className="fill-muted-foreground" fontSize="11">
                 {lv}
               </text>
-              <line x1="40" y1={y} x2={Math.max(data.length * (barW + 8) + 30, 310)} y2={y} stroke="#E9E3DD" strokeDasharray="4 4" opacity="0.4" />
+              <line x1="40" y1={y} x2={Math.max(data.length * (barW + 8) + 30, 310)} y2={y} className="stroke-border" strokeDasharray="4 4" opacity="0.4" />
             </g>
           )
         })}
@@ -78,9 +84,21 @@ function BarChart({ data }: { data: { label: string; value: number | null; idx: 
 
 export function DashboardPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { addToast } = useToast()
   const [dashboard, setDashboard] = useState<StudentDashboard | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const latestReview = dashboard?.latest_review ?? null
+
+  const chartData = useMemo(
+    () => dashboard?.progress_chart.map((p, i) => ({
+      label: String(p.lecture_number),
+      value: p.ai_level,
+      idx: i,
+    })) ?? [],
+    [dashboard?.progress_chart]
+  )
 
   useEffect(() => {
     api.dashboard.student()
@@ -106,24 +124,6 @@ export function DashboardPage() {
 
   if (!dashboard) return null
 
-  const latestReview = dashboard.latest_review
-
-  const kpiDelta = (current: number, total: number) => {
-    if (total === 0) return { text: '—', icon: Minus, color: 'text-muted-foreground' }
-    const pct = Math.round(current / total * 100)
-    if (pct > 50) return { text: `${pct}%`, icon: ArrowUpRight, color: 'text-emerald-600' }
-    if (pct > 20) return { text: `${pct}%`, icon: TrendingUp, color: 'text-amber-600' }
-    return { text: `${pct}%`, icon: ArrowDownRight, color: 'text-red-600' }
-  }
-
-  const progressDelta = kpiDelta(dashboard.completed_lectures, dashboard.total_lectures)
-
-  const chartData = dashboard.progress_chart.map((p, i) => ({
-    label: String(p.lecture_number),
-    value: p.ai_level,
-    idx: i,
-  }))
-
   return (
     <div className="p-6 space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -140,50 +140,94 @@ export function DashboardPage() {
         </button>
       </div>
 
+      {dashboard.completed_lectures === 0 && (
+        <Card className="border-primary/20 bg-primary/[0.03]">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-4">
+              <div className="hidden sm:flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 shrink-0">
+                <GraduationCap className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-semibold text-foreground">
+                  {user?.full_name
+                    ? <>Добро пожаловать, {user.full_name.split(' ')[0]}!</>
+                    : 'Добро пожаловать!'}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Курс состоит из 14 лекций в 4 блоках. После каждой — домашнее задание с AI-ревью.
+                  Твой уровень (0&ndash;3) показывает, насколько хорошо ты усвоил материал.
+                </p>
+                <div className="flex items-center gap-3 mt-4">
+                  <Button size="sm" onClick={() => navigate('/lectures/1')}>
+                    Начать первую лекцию
+                    <ArrowRight className="h-4 w-4 ml-1.5" />
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => navigate('/lectures')}>
+                    Смотреть программу
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Лекции</CardTitle>
-            <BookOpen className="h-4 w-4 text-primary" />
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <BookOpen className="h-3.5 w-3.5" />
+              <CardTitle className="text-xs font-medium uppercase tracking-wider">Лекции</CardTitle>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-semibold text-foreground">{dashboard.completed_lectures}</span>
-              <span className="text-sm text-muted-foreground">/ {dashboard.total_lectures}</span>
+          <CardContent className="pt-0">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-semibold text-foreground">{dashboard.completed_lectures}</span>
+              <span className="text-sm text-muted-foreground">из {dashboard.total_lectures}</span>
             </div>
             <Progress value={dashboard.progress_percentage} className="mt-3" />
             <div className="flex items-center gap-1 mt-2">
-              <progressDelta.icon className={`h-3.5 w-3.5 ${progressDelta.color}`} />
-              <span className={`text-xs ${progressDelta.color}`}>{progressDelta.text} завершено</span>
+              <button
+                onClick={() => navigate('/lectures')}
+                className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
+              >
+                К лекциям
+                <ArrowRight className="h-3 w-3" />
+              </button>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">ДЗ сдано</CardTitle>
-            <GitPullRequest className="h-4 w-4 text-primary" />
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <BookOpen className="h-3.5 w-3.5" />
+              <CardTitle className="text-xs font-medium uppercase tracking-wider">ДЗ сдано</CardTitle>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-semibold text-foreground">{dashboard.assignments.length}</span>
+          <CardContent className="pt-0">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-semibold text-foreground">{dashboard.assignments.length}</span>
               <span className="text-sm text-muted-foreground">работ</span>
             </div>
             <div className="flex items-center gap-1 mt-2">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-              <span className="text-xs text-emerald-600">{dashboard.assignments.filter(a => a.status === 'merged').length} принято</span>
+              <span className="text-xs text-success">
+                {dashboard.assignments.filter(a => a.status === 'merged').length} принято
+              </span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Уровень</CardTitle>
-            <Brain className="h-4 w-4 text-primary" />
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Brain className="h-3.5 w-3.5" />
+              <CardTitle className="text-xs font-medium uppercase tracking-wider">Уровень</CardTitle>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-semibold text-foreground">
+          <CardContent className="pt-0">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-semibold text-foreground">
                 {latestReview?.predicted_level ?? '—'}
               </span>
               <span className="text-sm text-muted-foreground">/ 3</span>
@@ -197,19 +241,21 @@ export function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Итераций</CardTitle>
-            <TrendingUp className="h-4 w-4 text-primary" />
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <TrendingUp className="h-3.5 w-3.5" />
+              <CardTitle className="text-xs font-medium uppercase tracking-wider">Итераций</CardTitle>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-semibold text-foreground">{dashboard.avg_iterations}</span>
-              <span className="text-sm text-muted-foreground">среднее</span>
+          <CardContent className="pt-0">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-semibold text-foreground">{dashboard.avg_iterations}</span>
+              <span className="text-sm text-muted-foreground">в среднем</span>
             </div>
             {dashboard.needs_review > 0 && (
               <div className="flex items-center gap-1 mt-2">
-                <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
-                <span className="text-xs text-amber-600">{dashboard.needs_review} требуют проверки</span>
+                <AlertCircle className="h-3.5 w-3.5 text-warning" />
+                <span className="text-xs text-warning">{dashboard.needs_review} требуют проверки</span>
               </div>
             )}
           </CardContent>

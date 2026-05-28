@@ -25,6 +25,10 @@
     --ring: 25 30% 28%;
     --radius: 0.75rem;
     --surface: 30 20% 97%;
+    --success: 140 20% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 35 60% 50%;
+    --warning-foreground: 0 0% 100%;
   }
 
   .dark {
@@ -48,6 +52,10 @@
     --input: 25 12% 22%;
     --ring: 30 20% 60%;
     --surface: 25 20% 10%;
+    --success: 140 15% 55%;
+    --success-foreground: 25 20% 10%;
+    --warning: 35 50% 60%;
+    --warning-foreground: 25 20% 10%;
   }
 }
 
@@ -57,12 +65,6 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased transition-colors duration-200;
-  }
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
   }
 }
 

@@ -4,16 +4,14 @@ import { useToast } from '@/hooks/useToast'
 import { api, type BlockData } from '@/services/api'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { BookOpen, Code, FileText } from 'lucide-react'
+import { BookOpen, Code, Terminal, Layers } from 'lucide-react'
 
-const blockColors = [
-  { border: 'border-l-[#C4A882] dark:border-l-[#8B7355]', bg: 'bg-[#F5EDE4] dark:bg-[#2A2218]', badge: 'bg-[#E8D9C8] dark:bg-[#3D3225] text-[#6B5240] dark:text-[#C4A882]' },
-  { border: 'border-l-[#A68B6B] dark:border-l-[#7A5F45]', bg: 'bg-[#EDE3D7] dark:bg-[#251E15]', badge: 'bg-[#D9C8B2] dark:bg-[#362B1E] text-[#5C4433] dark:text-[#A68B6B]' },
-  { border: 'border-l-[#8B6F55] dark:border-l-[#6B4F35]', bg: 'bg-[#E5D8CB] dark:bg-[#201A12]', badge: 'bg-[#C9B49C] dark:bg-[#2F2418] text-[#4D3627] dark:text-[#8B6F55]' },
-  { border: 'border-l-[#6B5240] dark:border-l-[#5C4433]', bg: 'bg-[#DDD0C2] dark:bg-[#1B1510]', badge: 'bg-[#B89F86] dark:bg-[#281E14] text-[#3E2B1E] dark:text-[#6B5240]' },
+const blockMeta = [
+  { icon: BookOpen, desc: 'Основы Python' },
+  { icon: Code, desc: 'Структуры данных' },
+  { icon: Terminal, desc: 'Продвинутые темы' },
+  { icon: Layers, desc: 'Инструменты и практики' },
 ]
-
-const blockIcons = [BookOpen, BookOpen, Code, FileText]
 
 export function LecturesPage() {
   const navigate = useNavigate()
@@ -53,23 +51,24 @@ export function LecturesPage() {
       </div>
 
       {blocks.map((block, idx) => {
-        const Icon = blockIcons[idx] || BookOpen
-        const colors = blockColors[idx] || blockColors[0]
+        const meta = blockMeta[idx] || blockMeta[0]
+        const Icon = meta.icon
 
         return (
           <section key={block.block}>
             <div className="flex items-center gap-2 mb-3">
-              <Icon className="h-5 w-5 text-foreground" />
+              <Icon className="h-5 w-5 text-primary" />
               <h3 className="text-base font-medium text-foreground">
                 Блок {block.block}: {block.title}
               </h3>
+              <span className="text-xs text-muted-foreground ml-auto">{meta.desc}</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {block.lectures.map((lecture) => (
+              {block.lectures.filter(l => l.number !== 99).map((lecture) => (
                 <Card
                   key={lecture.id}
-                  className={`cursor-pointer transition-all hover:shadow-md border-l-4 ${colors.border}`}
+                  className="cursor-pointer transition-all hover:shadow-md"
                   onClick={() => navigate(`/lectures/${lecture.number}`)}
                 >
                   <CardHeader className="pb-2">
@@ -94,7 +93,7 @@ export function LecturesPage() {
                     <CardContent>
                       <div className="flex flex-wrap gap-1">
                         {lecture.topics.split(', ').slice(0, 4).map((topic) => (
-                          <span key={topic} className={`text-[10px] px-1.5 py-0.5 rounded ${colors.badge}`}>
+                          <span key={topic} className="text-[10px] px-1.5 py-0.5 rounded bg-secondary/70 text-muted-foreground">
                             {topic}
                           </span>
                         ))}

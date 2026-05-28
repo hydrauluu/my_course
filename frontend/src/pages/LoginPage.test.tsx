@@ -7,7 +7,6 @@ vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({
     isAuthenticated: false,
     loading: false,
-    login: vi.fn().mockResolvedValue(undefined),
   }),
 }))
 
@@ -17,11 +16,11 @@ const renderWithRouter = (component: React.ReactNode) => {
 
 describe('LoginPage', () => {
   beforeEach(() => {
-    global.fetch = vi.fn(() =>
+    vi.stubGlobal('fetch', vi.fn(() =>
       Promise.resolve({
         json: () => Promise.resolve({ url: 'https://github.com/login/oauth/authorize?client_id=test' }),
       })
-    ) as unknown as typeof fetch
+    ))
   })
 
   it('renders the login page title', () => {

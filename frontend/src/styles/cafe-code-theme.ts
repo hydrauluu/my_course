@@ -1,3 +1,4 @@
+// @ts-expect-error - PrismTheme type mismatch between versions
 import type { PrismTheme } from 'react-syntax-highlighter'
 
 const theme: Record<string, React.CSSProperties> = {
