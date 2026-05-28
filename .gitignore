@@ -36,3 +36,10 @@ Thumbs.db
 
 # Environment
 !.env.example
+
+
+.impeccable/critique
+AGENTS.md 
+DESIGN.md 
+PRODUCT.md 
+
